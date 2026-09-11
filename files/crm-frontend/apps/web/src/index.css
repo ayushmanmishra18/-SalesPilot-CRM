@@ -1,0 +1,174 @@
+@import "tailwindcss";
+
+/* ══════════════════════════════════════════════════
+   DESIGN TOKENS — Aurora Glow CRM
+   ══════════════════════════════════════════════════ */
+:root {
+  /* Brand */
+  --green:         #10B981;
+  --green-deep:    #059669;
+  --green-glow:    rgba(16,185,129,0.22);
+  --green-subtle:  rgba(16,185,129,0.08);
+
+  /* Dark theme (default) */
+  --bg:            #080810;
+  --surface:       #0F0F1A;
+  --surface-2:     #161624;
+  --surface-3:     #1C1C2E;
+  --border:        #1E1E30;
+  --border-2:      #252538;
+
+  --text:          #EEEEF8;
+  --text-2:        #9898B8;
+  --text-3:        #55557A;
+
+  --sidebar:       #0A0A16;
+  --input:         #080810;
+
+  /* SLA */
+  --overdue:       #E4483F;
+  --today:         #F59E0B;
+  --upcoming:      #3B82F6;
+  --ontrack:       #10B981;
+  --unsched:       #6B7280;
+}
+
+[data-theme="light"] {
+  --bg:            #F0F1F8;
+  --surface:       #FFFFFF;
+  --surface-2:     #F5F6FC;
+  --surface-3:     #ECEDF5;
+  --border:        #E2E4EE;
+  --border-2:      #D8DAE8;
+  --text:          #0C0C18;
+  --text-2:        #52536E;
+  --text-3:        #9899B2;
+  --sidebar:       #F0F1F8;
+  --input:         #FFFFFF;
+}
+
+/* ══════════════════════════════════════════════════
+   BASE
+   ══════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13.5px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ══════════════════════════════════════════════════
+   UTILITIES
+   ══════════════════════════════════════════════════ */
+.g  { background: linear-gradient(135deg, var(--green) 0%, var(--green-deep) 100%); }
+.gl { box-shadow: 0 0 20px var(--green-glow), 0 0 40px rgba(16,185,129,0.08); }
+
+/* ══════════════════════════════════════════════════
+   ANIMATIONS
+   ══════════════════════════════════════════════════ */
+@keyframes fadeUp   { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeIn   { from { opacity:0; } to { opacity:1; } }
+@keyframes spin     { to { transform:rotate(360deg); } }
+@keyframes pulse    { 0%,100% { opacity:1; } 50% { opacity:.5; } }
+
+.ai   { animation: fadeUp  .22s cubic-bezier(.16,1,.3,1) both; }
+.ai2  { animation: fadeIn  .18s ease both; }
+
+/* ══════════════════════════════════════════════════
+   SCROLLBAR
+   ══════════════════════════════════════════════════ */
+::-webkit-scrollbar { width:3px; height:3px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border-2); border-radius:99px; }
+::-webkit-scrollbar-thumb:hover { background:var(--text-3); }
+
+/* ══════════════════════════════════════════════════
+   FOCUS
+   ══════════════════════════════════════════════════ */
+:focus-visible { outline:2px solid var(--green); outline-offset:2px; border-radius:6px; }
+
+/* ══════════════════════════════════════════════════
+   NATIVE ELEMENTS GLOBALLY STYLED
+   ══════════════════════════════════════════════════ */
+select {
+  appearance: none;
+  background-color: var(--input);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239898B8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  border: 1.5px solid var(--border-2);
+  border-radius: 9px;
+  padding: 0 30px 0 11px;
+  height: 36px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  width: 100%;
+  outline: none;
+  transition: border-color .15s;
+  font-family: inherit;
+}
+select:focus { border-color: var(--green); }
+select option { background: var(--surface-2); }
+
+input[type="checkbox"] {
+  width: 15px; height: 15px;
+  border-radius: 4px;
+  border: 1.5px solid var(--border-2);
+  accent-color: var(--green);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+input[type="datetime-local"],
+input[type="date"] {
+  font-family: inherit;
+  color: var(--text);
+  background: var(--input);
+  border: 1.5px solid var(--border-2);
+  border-radius: 9px;
+  padding: 0 11px;
+  height: 36px;
+  font-size: 13px;
+  outline: none;
+  width: 100%;
+}
+input[type="datetime-local"]:focus,
+input[type="date"]:focus { border-color: var(--green); }
+input[type="number"] {
+  font-family: inherit;
+}
+
+/* ══════════════════════════════════════════════════
+   TABLE
+   ══════════════════════════════════════════════════ */
+table { border-collapse: collapse; width: 100%; }
+thead th {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-3);
+  text-align: left;
+  padding: 10px 16px;
+  white-space: nowrap;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+tbody td { padding: 11px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr { transition: background .12s; }
+tbody tr:hover td { background: var(--surface-2); }
+
+/* ══════════════════════════════════════════════════
+   MOBILE
+   ══════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  #desktop-sidebar { display: none !important; }
+  main { padding: 14px !important; }
+}
