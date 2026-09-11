@@ -1,0 +1,14 @@
+{
+  "name": "crm-backend",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api":    "npm run dev --workspace=apps/api",
+    "dev:worker": "npm run dev --workspace=apps/worker",
+    "build":      "npm run build --workspaces",
+    "lint":       "npm run lint --workspaces --if-present"
+  }
+}
