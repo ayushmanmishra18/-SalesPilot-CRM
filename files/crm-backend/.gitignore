@@ -35,4 +35,4 @@ Thumbs.db
 coverage/
 
 # Render / deployment artifacts
-.render/
+seed-admin.js

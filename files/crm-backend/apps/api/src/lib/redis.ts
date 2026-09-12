@@ -4,8 +4,9 @@ import { logger } from './logger'
 
 // Singleton ioredis client shared across the API process
 export const redis = new Redis(config.redisUrl, {
-  maxRetriesPerRequest: null,  // required by BullMQ
-  enableReadyCheck:     false,
+  maxRetriesPerRequest: 3,  // Fail fast instead of infinite retries
+  enableReadyCheck:     true,
+  retryStrategy:        (times) => Math.min(times * 100, 3000),
   lazyConnect:          true,
 })
 

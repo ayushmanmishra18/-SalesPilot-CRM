@@ -32,12 +32,17 @@ export function createApp() {
   }))
 
   // ── CORS — allow only the deployed frontend origin ─────────────────────────
+  const corsOrigins = config.nodeEnv === 'development' 
+    ? ['http://localhost:5173', 'http://localhost:3000'] 
+    : [config.frontendUrl]
+  
   app.use(cors({
-    origin:      config.frontendUrl,
+    origin:      corsOrigins,
     credentials: true,
     methods:     ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'X-Request-Id'],
     exposedHeaders: ['X-Request-Id'],
+    maxAge:      86400, // 24 hours for preflight caching
   }))
 
   // ── Request parsing ────────────────────────────────────────────────────────
