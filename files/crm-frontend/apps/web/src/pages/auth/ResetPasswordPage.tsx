@@ -1,12 +1,11 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { KeyRound, CheckCircle } from 'lucide-react'
-import { useAuthStore } from '../../store/auth'
 import { authApi } from '../../api'
 import { Button, Alert } from '../../components/ui'
 
 export default function ResetPasswordPage() {
-  const nav = useNavigate(); const setReset = useAuthStore(s=>s.setMustReset)
+  const nav = useNavigate()
   const [pw, setPw] = useState(''); const [c, setC] = useState('')
   const [err, setErr] = useState(''); const [loading, setLoading] = useState(false)
   const checks = [{ ok:pw.length>=8,label:'8+ characters' },{ ok:/[A-Z]/.test(pw),label:'Uppercase' },{ ok:/[0-9]/.test(pw),label:'Number' },{ ok:pw===c&&!!c,label:'Passwords match' }]
@@ -14,7 +13,11 @@ export default function ResetPasswordPage() {
     e.preventDefault(); setErr('')
     if (!checks.every(x=>x.ok)) { setErr('Please meet all requirements'); return }
     setLoading(true)
-    try { await authApi.resetPassword(pw,c); setReset(false); nav('/dashboard') }
+    try { 
+      await authApi.resetPassword(pw,c); 
+      // Password reset doesn't create a session - user needs to login again
+      nav('/login', { state: { message: 'Password reset! Please login with your new password.' } }) 
+    }
     catch(e:any) { setErr(e.response?.data?.error?.message??'Something went wrong') }
     finally { setLoading(false) }
   }

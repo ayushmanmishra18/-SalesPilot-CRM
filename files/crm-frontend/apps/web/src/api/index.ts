@@ -2,10 +2,11 @@ import axios from 'axios'
 
 const BASE = import.meta.env['VITE_API_URL'] ?? 'http://localhost:3001'
 
+// Main API instance for user/tenant operations (includes user token interceptor)
 export const api = axios.create({
   baseURL:        BASE,
-  withCredentials: false,
-  headers: { 'Content-Type': 'application/json' },
+  withCredentials: true,
+  headers: { 'Content-Type': 'application/json', 'X-Request-Id': crypto.randomUUID() },
 })
 
 api.interceptors.request.use(config => {
@@ -36,6 +37,19 @@ api.interceptors.response.use(
     return Promise.reject(err)
   }
 )
+
+// Separate axios instance for admin operations (no user token, uses adminToken)
+const adminAxios = axios.create({
+  baseURL: BASE,
+  withCredentials: true,
+  headers: { 'Content-Type': 'application/json' },
+})
+
+adminAxios.interceptors.request.use(config => {
+  const adminToken = localStorage.getItem('adminToken')
+  if (adminToken) config.headers.Authorization = `Bearer ${adminToken}`
+  return config
+})
 
 export function newIdempotencyKey() { return crypto.randomUUID() }
 
@@ -94,11 +108,11 @@ export const notificationsApi = {
 }
 
 export const adminApi = {
-  login:       (email: string, password: string) => api.post('/admin/login', { email, password }),
-  listTenants: () => api.get('/admin/tenants'),
-  addTenant:   (data: any) => api.post('/admin/tenants', data),
-  suspend:     (id: string) => api.patch(`/admin/tenants/${id}/suspend`),
-  reactivate:  (id: string) => api.patch(`/admin/tenants/${id}/reactivate`),
+  login:       (email: string, password: string) => adminAxios.post('/admin/login', { email, password }),
+  listTenants: () => adminAxios.get('/admin/tenants'),
+  addTenant:   (data: any) => adminAxios.post('/admin/tenants', data),
+  suspend:     (id: string) => adminAxios.patch(`/admin/tenants/${id}/suspend`),
+  reactivate:  (id: string) => adminAxios.patch(`/admin/tenants/${id}/reactivate`),
 }
 
 export const analyticsApi = {

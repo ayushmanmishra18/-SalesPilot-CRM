@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Sun, Moon, Eye, EyeOff, ArrowRight } from 'lucide-react'
 import { useAuthStore } from '../../store/auth'
 import { useThemeStore } from '../../store/theme'
@@ -10,6 +10,7 @@ declare global { interface Window { google:any; msal:any } }
 
 export default function LoginPage() {
   const nav        = useNavigate()
+  const location   = useLocation()
   const setTokens  = useAuthStore(s=>s.setTokens)
   const setReset   = useAuthStore(s=>s.setMustReset)
   const { theme, toggle } = useThemeStore()
@@ -18,25 +19,39 @@ export default function LoginPage() {
   const [password,  setPassword]  = useState('')
   const [showPw,    setShowPw]    = useState(false)
   const [error,     setError]     = useState('')
+  const [success,   setSuccess]   = useState('')
   const [loading,   setLoading]   = useState(false)
   const [ssoLoad,   setSsoLoad]   = useState<'google'|'microsoft'|null>(null)
 
   const GID = import.meta.env['VITE_GOOGLE_CLIENT_ID'] as string|undefined
   const MID = import.meta.env['VITE_MICROSOFT_CLIENT_ID'] as string|undefined
 
+  // Show success message from password reset
+  useEffect(() => {
+    if (location.state?.message) {
+      setSuccess(location.state.message)
+      // Clear the message from location to avoid showing it again on refresh
+      nav('.', { state: { ...location.state, message: null }, replace: true })
+    }
+  }, [location.state])
+
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (!email||!password) return
     setError(''); setLoading(true)
+    console.log('Attempting login for:', email)
     try {
       const { data } = await authApi.login(email, password)
+      console.log('Login success, tokens received:', data.accessToken ? 'YES' : 'NO')
       setTokens(data.accessToken, data.refreshToken)
+      console.log('Tokens stored in localStorage:', localStorage.getItem('accessToken') ? 'YES' : 'NO')
       nav('/dashboard')
     } catch (err:any) {
+      console.log('Login failed:', err.response?.data || err.message)
       const code = err.response?.data?.error?.code
       if (code==='MUST_RESET_PASSWORD') {
+        // Only store email, not password (security best practice)
         sessionStorage.setItem('reset-email',email)
-        sessionStorage.setItem('reset-password',password)
         setReset(true); nav('/reset-password'); return
       }
       setError(err.response?.data?.error?.message ?? 'Invalid email or password')
@@ -151,6 +166,7 @@ export default function LoginPage() {
             <p className="text-[13.5px]" style={{color:'var(--text-3)'}}>Sign in to your workspace</p>
           </div>
 
+          {success&&<div className="mb-5"><Alert type="success">{success}</Alert></div>}
           {error&&<div className="mb-5"><Alert type="error">{error}</Alert></div>}
 
           {/* SSO */}

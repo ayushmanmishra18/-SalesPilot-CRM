@@ -7,6 +7,7 @@ import { formatRelativeTime } from '../../utils/sla'
 
 function LoginGate({ onLogin }: { onLogin:()=>void }) {
   const [email,setEmail]=useState(''); const [pw,setPw]=useState(''); const [err,setErr]=useState(''); const [loading,setLoading]=useState(false)
+  
   async function submit(e:React.FormEvent) {
     e.preventDefault(); setLoading(true)
     try { const {data}=await adminApi.login(email,pw); localStorage.setItem('adminToken',data.token); onLogin() }
