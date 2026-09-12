@@ -4,7 +4,7 @@ import { Sun, Moon, Eye, EyeOff, ArrowRight } from 'lucide-react'
 import { useAuthStore } from '../../store/auth'
 import { useThemeStore } from '../../store/theme'
 import { authApi, api } from '../../api'
-import { Button, Alert, Divider } from '../../components/ui'
+import { Alert, Divider } from '../../components/ui'
 
 declare global { interface Window { google:any; msal:any } }
 

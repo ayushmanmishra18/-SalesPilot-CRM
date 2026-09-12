@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Sun, Moon, Phone, Mail, ChevronDown, Check, ArrowRight } from 'lucide-react'
+import { Sun, Moon, Mail, ChevronDown, Check } from 'lucide-react'
 import { useThemeStore } from '../../store/theme'
 
 /* ─── tiny helpers ─────────────────────────────────────────────── */

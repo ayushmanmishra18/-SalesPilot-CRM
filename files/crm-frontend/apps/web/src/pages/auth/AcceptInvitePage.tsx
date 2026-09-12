@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { UserPlus, CheckCircle } from 'lucide-react'
+import { UserPlus } from 'lucide-react'
 import { useAuthStore } from '../../store/auth'
 import { authApi } from '../../api'
 import { Button, Alert } from '../../components/ui'

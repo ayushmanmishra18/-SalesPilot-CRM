@@ -30,15 +30,15 @@ export function Button({ variant='primary', size='md', loading, icon, children, 
 
 /* ══════ INPUT ══════ */
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label?: string; error?: string; hint?: string; prefix?: React.ReactNode
+  label?: string; error?: string; hint?: string; icon?: React.ReactNode
 }
-export function Input({ label, error, hint, prefix, className='', style, ...p }: InputProps) {
+export function Input({ label, error, hint, icon, className='', style, ...p }: InputProps) {
   return (
     <div className="flex flex-col gap-1.5">
       {label && <label className="text-[11.5px] font-semibold tracking-wide" style={{color:'var(--text-3)'}}>{label}</label>}
       <div className="relative flex items-center">
-        {prefix && <div className="absolute left-3 flex items-center pointer-events-none" style={{color:'var(--text-3)'}}>{prefix}</div>}
-        <input {...p} className={`w-full rounded-[9px] text-[13px] outline-none transition-all h-9 ${prefix?'pl-9':'pl-3'} pr-3 ${className}`}
+        {icon && <div className="absolute left-3 flex items-center pointer-events-none" style={{color:'var(--text-3)'}}>{icon}</div>}
+        <input {...p} className={`w-full rounded-[9px] text-[13px] outline-none transition-all h-9 ${icon?'pl-9':'pl-3'} pr-3 ${className}`}
           style={{background:'var(--input)',border:`1.5px solid ${error?'#E4483F55':'var(--border-2)'}`,color:'var(--text)',...style}}
           onFocus={e=>{e.currentTarget.style.borderColor=error?'#E4483F':'var(--green)';p.onFocus?.(e)}}
           onBlur={e=>{e.currentTarget.style.borderColor=error?'#E4483F55':'var(--border-2)';p.onBlur?.(e)}}/>
@@ -88,12 +88,12 @@ export function Badge({ children, color='var(--green)' }: { children:React.React
 }
 
 /* ══════ CARD ══════ */
-export function Card({ children, className='', glow, onClick, p: pad }: {
-  children:React.ReactNode; className?:string; glow?:boolean; onClick?:()=>void; p?:string
+export function Card({ children, className='', glow, onClick, padding }: {
+  children:React.ReactNode; className?:string; glow?:boolean; onClick?:()=>void; padding?:string
 }) {
   return (
     <div onClick={onClick} className={`rounded-[12px] overflow-hidden ${className}`}
-      style={{background:'var(--surface)',border:`1px solid ${glow?'rgba(16,185,129,0.4)':'var(--border)'}`,boxShadow:glow?'0 0 28px rgba(16,185,129,0.10), inset 0 1px 0 rgba(16,185,129,0.1)':'none',cursor:onClick?'pointer':undefined,padding:pad}}>
+      style={{background:'var(--surface)',border:`1px solid ${glow?'rgba(16,185,129,0.4)':'var(--border)'}`,boxShadow:glow?'0 0 28px rgba(16,185,129,0.10), inset 0 1px 0 rgba(16,185,129,0.1)':'none',cursor:onClick?'pointer':undefined,padding}}>
       {children}
     </div>
   )
@@ -117,7 +117,7 @@ export function StatCard({ label, value, sub, icon:Icon, accent, trend }: {
   label:string; value:string|number; sub?:string; icon?:any; accent?:boolean; trend?:'up'|'down'
 }) {
   return (
-    <Card glow={accent} p="18px 20px 20px">
+    <Card glow={accent} padding="18px 20px 20px">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="text-[10.5px] font-semibold uppercase tracking-widest mb-2.5" style={{color:'var(--text-3)'}}>{label}</div>
@@ -177,22 +177,22 @@ export function Tabs({ tabs, active, onChange }: { tabs:{key:string;label:string
 }
 
 /* ══════ PROGRESS BAR ══════ */
-export function ProgressBar({ pct, color='var(--green)', h=5 }: { pct:number; color?:string; h?:number }) {
+export function ProgressBar({ pct, color='var(--green)', height=5 }: { pct:number; color?:string; height?:number }) {
   return (
-    <div className="w-full rounded-full overflow-hidden" style={{height:h,background:'var(--surface-3)'}}>
+    <div className="w-full rounded-full overflow-hidden" style={{height,background:'var(--surface-3)'}}>
       <div className="h-full rounded-full transition-all duration-700" style={{width:`${Math.min(100,Math.max(0,pct))}%`,background:color}}/>
     </div>
   )
 }
 
 /* ══════ EMPTY STATE ══════ */
-export function EmptyState({ icon, title, desc, action }: { icon:React.ReactNode; title:string; desc:string; action?:React.ReactNode }) {
+export function EmptyState({ icon, title, description, action }: { icon:React.ReactNode; title:string; description:string; action?:React.ReactNode }) {
   return (
     <div className="flex flex-col items-center gap-3 py-16 text-center">
       <div className="text-[38px] opacity-20">{icon}</div>
       <div>
         <div className="font-semibold text-[14px]" style={{color:'var(--text)'}}>{title}</div>
-        <div className="text-[12.5px] mt-1 max-w-xs" style={{color:'var(--text-3)'}}>{desc}</div>
+        <div className="text-[12.5px] mt-1 max-w-xs" style={{color:'var(--text-3)'}}>{description}</div>
       </div>
       {action}
     </div>

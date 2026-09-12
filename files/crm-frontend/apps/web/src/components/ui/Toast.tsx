@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { useEffect } from 'react'
 import { CheckCircle2, XCircle, AlertCircle, X } from 'lucide-react'
 
 type ToastType = 'success' | 'error' | 'info'

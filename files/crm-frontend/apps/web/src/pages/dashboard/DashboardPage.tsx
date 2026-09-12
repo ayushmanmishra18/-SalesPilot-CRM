@@ -2,13 +2,11 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { dashboardApi } from '../../api'
 import { Card, CardHeader, StatCard, SlaPill, Spinner } from '../../components/ui'
-import { formatCurrency, formatRelativeTime, type SlaStatus } from '../../utils/sla'
-import { AlertCircle, TrendingUp, Trophy, Target, Users, ChevronRight, CheckSquare } from 'lucide-react'
-import { useAuthStore } from '../../store/auth'
+import { formatCurrency, type SlaStatus } from '../../utils/sla'
+import { AlertCircle, TrendingUp, Trophy, Target, ChevronRight } from 'lucide-react'
 
 export default function DashboardPage() {
   const navigate = useNavigate()
-  const user     = useAuthStore(s => s.user)
 
   const { data: fu, isLoading: fuLoading } = useQuery({
     queryKey: ['followups'],
@@ -54,7 +52,7 @@ export default function DashboardPage() {
       {/* KPI row */}
       <div className="grid grid-cols-4 gap-3">
         <StatCard label="Open pipeline"      value={formatCurrency(s?.openPipelineValue ?? 0, currency)} sub={`${s?.dealsByStage?.reduce((n: number, d: any) => n + d.count, 0) ?? 0} open deals`} icon={TrendingUp} />
-        <StatCard label="Overdue follow-ups" value={s?.overdueCount ?? 0}  icon={AlertCircle} urgent={(s?.overdueCount ?? 0) > 0} sub="need action now" />
+        <StatCard label="Overdue follow-ups" value={s?.overdueCount ?? 0}  icon={AlertCircle} accent={(s?.overdueCount ?? 0) > 0} sub="need action now" />
         <StatCard label="Won this month"     value={formatCurrency(s?.wonThisMonth ?? 0, currency)} icon={Trophy} sub="closed won" trend="up" />
         <StatCard label="Due today"          value={s?.dueTodayCount ?? 0} icon={Target} sub="follow-ups today" />
       </div>

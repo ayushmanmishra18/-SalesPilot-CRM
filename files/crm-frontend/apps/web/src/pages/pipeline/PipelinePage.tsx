@@ -216,7 +216,7 @@ export default function PipelinePage() {
               value={form.value} onChange={e => setForm(f=>({...f,value:e.target.value}))} />
             <Select label="Stage" value={form.stage || stageNames[0]}
               onChange={e => setForm(f=>({...f,stage:e.target.value}))}
-              options={stageNames.map(s => ({ value:s, label:s }))} />
+              options={stageNames.map((s: string) => ({ value:s, label:s }))} />
           </div>
           <div className="flex gap-2.5 pt-1">
             <Button variant="ghost" onClick={() => setAdding(false)} className="flex-1">Cancel</Button>

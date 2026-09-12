@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Trophy, XCircle, ExternalLink, User, DollarSign, Calendar, Tag } from 'lucide-react'
+import { ArrowLeft, Trophy, XCircle, User, DollarSign, Calendar } from 'lucide-react'
 import { dealsApi, usersApi } from '../../api'
-import { Button, Card, CardHeader, Modal, Input, Spinner, SlaPill, Badge } from '../../components/ui'
+import { Button, Card, CardHeader, Modal, Input, Spinner, Badge } from '../../components/ui'
 import { ActivityComposer } from '../../components/activity/ActivityComposer'
 import { ActivityFeed } from '../../components/activity/ActivityFeed'
 import { NextActionWidget } from '../../components/deal/NextActionWidget'
@@ -49,9 +49,8 @@ export default function DealDetailPage() {
   const isOpen  = deal.status === 'open'
   const currency= deal.currency ?? 'USD'
   const owner   = users.find((u: any) => u.id === deal.ownerId)
-  const contact = null // would come from contacts API in a full impl
 
-  const statusColor = { open:'#4C8BF5', won:'#10B981', lost:'#E4483F' }[deal.status] ?? '#98A2B3'
+  const statusColor = ({ open:'#4C8BF5', won:'#10B981', lost:'#E4483F' } as Record<string, string>)[deal.status] ?? '#98A2B3'
 
   return (
     <div className="flex flex-col gap-4 h-full">

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { analyticsApi } from '../../api'
-import { Card, CardHeader, StatCard, Tabs, ProgressBar, Spinner, Badge } from '../../components/ui'
+import { Card, CardHeader, StatCard, Tabs, ProgressBar, Spinner } from '../../components/ui'
 import { formatCurrency } from '../../utils/sla'
 import { useAuthStore } from '../../store/auth'
 import {
