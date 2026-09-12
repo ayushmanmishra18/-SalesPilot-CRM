@@ -46,7 +46,7 @@ SalesPilot is a full-stack, multi-tenant CRM comparable to Pipedrive and HubSpot
 ┌─────────────────────────────────────────────────────────────┐
 │  Login                        │  Dashboard                  │
 │  ─ Brand panel + feature list │  ─ 4 KPI stat cards         │
-│  ─ Google + Microsoft SSO     │  ─ Live follow-up list      │
+│  ─ Google SSO                 │  ─ Live follow-up list      │
 │  ─ Email + password           │  ─ Pipeline bar chart       │
 ├─────────────────────────────────────────────────────────────┤
 │  Pipeline (Kanban)            │  Deal Detail                │
@@ -85,7 +85,7 @@ SalesPilot is a full-stack, multi-tenant CRM comparable to Pipedrive and HubSpot
 | Cache / Queue | Redis (ioredis) |
 | Job queue | BullMQ (SLA engine) |
 | Real-time | Socket.IO + Redis adapter |
-| Auth | JWT (access 15m + refresh 30d, rotation + reuse detection) |
+| Auth | JWT access (15m) + opaque refresh (DB-hash validated, rotation + reuse detection) + separate admin token |
 | Validation | Zod |
 | Email | Nodemailer (SMTP) + Gmail OAuth |
 | Logging | Winston (structured JSON + requestId) |
@@ -183,7 +183,7 @@ crm/
 - ✅ **Multi-tenant** — every query scoped to tenant from JWT, never from request body
 - ✅ **Three roles** — Admin / Member / Viewer, enforced server-side on every route
 - ✅ **Super Admin** — separate identity, provisions tenants, never touches tenant data
-- ✅ **Google + Microsoft Sign-In** — OAuth, email-matched to invited user
+- ✅ **Google Sign-In** — OAuth, email-matched to invited user
 - ✅ **Refresh token rotation** — reuse detection, family revocation
 - ✅ **Idempotency** — every POST requires Idempotency-Key, duplicate requests safely replayed
 - ✅ **Rate limiting** — IP-keyed on auth, user+tenant-keyed on API
@@ -223,7 +223,7 @@ Edit `apps/api/.env`:
 MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/crm
 REDIS_URL=rediss://default:token@endpoint.upstash.io:6380
 JWT_ACCESS_SECRET=your-32-char-random-secret
-JWT_REFRESH_SECRET=your-other-32-char-random-secret
+JWT_ADMIN_SECRET=your-other-32-char-random-secret
 FRONTEND_URL=http://localhost:5173
 SUPER_ADMIN_EMAIL=admin@yourcompany.com
 SUPER_ADMIN_PASSWORD=YourSecurePassword123!
@@ -323,7 +323,7 @@ npm run dev
 | `MONGODB_URI` | ✅ | Atlas connection string |
 | `REDIS_URL` | ✅ | Upstash URL (`rediss://...` with TLS) |
 | `JWT_ACCESS_SECRET` | ✅ | 32+ random chars |
-| `JWT_REFRESH_SECRET` | ✅ | 32+ random chars (different from access) |
+| `JWT_ADMIN_SECRET` | ✅ | 32+ random chars, independent of access secret |
 | `FRONTEND_URL` | ✅ | Exact frontend origin, no trailing slash |
 | `SUPER_ADMIN_EMAIL` | ✅ | Platform admin email (auto-seeded on boot) |
 | `SUPER_ADMIN_PASSWORD` | ✅ | Platform admin password |
@@ -331,12 +331,12 @@ npm run dev
 | `GOOGLE_GMAIL_CLIENT_ID` | Optional | Gmail send OAuth |
 | `GOOGLE_GMAIL_CLIENT_SECRET` | Optional | Gmail OAuth secret |
 | `GOOGLE_GMAIL_REDIRECT_URI` | Optional | Must match Google Console |
-| `MICROSOFT_CLIENT_ID` | Optional | Microsoft Sign-In |
 | `SMTP_HOST` | Optional | SMTP host for invite emails |
 | `SMTP_PORT` | Optional | SMTP port (587) |
 | `SMTP_USER` | Optional | SMTP username |
 | `SMTP_PASS` | Optional | SMTP password / app password |
 | `EMAIL_FROM` | Optional | Sender name + email |
+| `LEADS_NOTIFY_EMAIL` | Optional | Where new landing-page leads get emailed |
 
 ### Frontend (`apps/web/.env`)
 
@@ -344,7 +344,6 @@ npm run dev
 |---|---|---|
 | `VITE_API_URL` | ✅ | Backend URL |
 | `VITE_GOOGLE_CLIENT_ID` | Optional | Google Sign-In client ID |
-| `VITE_MICROSOFT_CLIENT_ID` | Optional | Microsoft Sign-In client ID |
 
 ---
 
