@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Paperclip, Upload, Trash2, FileText, Image, File, ExternalLink } from 'lucide-react'
 import { api } from '../../api'
-import { Spinner } from '../ui'
+import { Spinner, ConfirmModal } from '../ui'
 import { toast } from '../ui/Toast'
 import { formatRelativeTime } from '../../utils/sla'
 
@@ -28,6 +28,7 @@ export function DocumentsPanel({ relatedTo, canWrite }: Props) {
   const queryClient = useQueryClient()
   const fileRef     = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
+  const [removing,  setRemoving]  = useState<{ id: string; name: string } | null>(null)
 
   const key = `${relatedTo.type}:${relatedTo.id}`
 
@@ -41,6 +42,7 @@ export function DocumentsPanel({ relatedTo, canWrite }: Props) {
     onSuccess:  () => {
       queryClient.invalidateQueries({ queryKey: ['documents', relatedTo.id] })
       toast.success('File removed')
+      setRemoving(null)
     },
   })
 
@@ -130,12 +132,12 @@ export function DocumentsPanel({ relatedTo, canWrite }: Props) {
               </div>
               <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 {/* Download / open */}
-                <a href={doc.url} download={doc.name} target="_blank" rel="noreferrer"
+                <a href={doc.url} download={doc.name} target="_blank" rel="noreferrer" aria-label={`Download ${doc.name}`}
                   className="hover:opacity-80" style={{ color: 'var(--text-3)' }}>
                   <ExternalLink size={12} />
                 </a>
                 {canWrite && (
-                  <button onClick={() => deleteMut.mutate(doc.id)}
+                  <button onClick={() => setRemoving({ id: doc.id, name: doc.name })} aria-label={`Remove ${doc.name}`}
                     className="hover:opacity-80" style={{ color: '#E4483F' }}>
                     <Trash2 size={12} />
                   </button>
@@ -145,6 +147,13 @@ export function DocumentsPanel({ relatedTo, canWrite }: Props) {
           ))}
         </div>
       )}
+
+      <ConfirmModal open={!!removing} onClose={() => setRemoving(null)}
+        onConfirm={() => deleteMut.mutate(removing!.id)}
+        loading={deleteMut.isPending}
+        title="Remove file?"
+        description={<>This will permanently remove <strong style={{ color: 'var(--text)' }}>{removing?.name}</strong>. This can't be undone.</>}
+        confirmLabel="Remove file" />
     </div>
   )
 }

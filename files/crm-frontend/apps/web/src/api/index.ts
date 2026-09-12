@@ -113,6 +113,8 @@ export const adminApi = {
   addTenant:   (data: any) => adminAxios.post('/admin/tenants', data),
   suspend:     (id: string) => adminAxios.patch(`/admin/tenants/${id}/suspend`),
   reactivate:  (id: string) => adminAxios.patch(`/admin/tenants/${id}/reactivate`),
+  listLeads:   () => adminAxios.get('/admin/leads'),
+  markContacted: (id: string) => adminAxios.patch(`/admin/leads/${id}/contacted`),
 }
 
 export const analyticsApi = {

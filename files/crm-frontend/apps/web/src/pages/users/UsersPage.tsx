@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Trash2, Copy, Check } from 'lucide-react'
 import { usersApi, newIdempotencyKey } from '../../api'
-import { Button, Card, Modal, Input, Select, Spinner, Badge } from '../../components/ui'
+import { Button, Card, Modal, ConfirmModal, Input, Select, Spinner, Badge } from '../../components/ui'
 import { toast } from '../../components/ui/Toast'
 import { formatRelativeTime } from '../../utils/sla'
 import { useAuthStore } from '../../store/auth'
@@ -30,6 +30,7 @@ export default function UsersPage() {
   const [errors,      setErrors]      = useState<Record<string, string>>({})
   const [copied,      setCopied]      = useState(false)
   const [inviteToken, setInviteToken] = useState('')
+  const [removing,    setRemoving]    = useState<{ id: string; name: string } | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['users'],
@@ -49,7 +50,7 @@ export default function UsersPage() {
 
   const removeMut = useMutation({
     mutationFn: (id: string) => usersApi.remove(id),
-    onSuccess:  () => { queryClient.invalidateQueries({ queryKey: ['users'] }); toast.success('User removed') },
+    onSuccess:  () => { queryClient.invalidateQueries({ queryKey: ['users'] }); toast.success('User removed'); setRemoving(null) },
   })
 
   const roleMut = useMutation({
@@ -71,7 +72,7 @@ export default function UsersPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-[16px] font-bold" style={{ color: 'var(--text)' }}>Team</h1>
           <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-3)' }}>{active.length} active · {invited.length} pending invite</p>
@@ -137,7 +138,7 @@ export default function UsersPage() {
                 </td>
                 <td className="px-5 py-3.5">
                   {isAdmin && u.id !== myId && (
-                    <button onClick={() => removeMut.mutate(u.id)}
+                    <button onClick={() => setRemoving({ id: u.id, name: u.name })} aria-label={`Remove ${u.name}`}
                       className="transition-colors" style={{ color: 'var(--text-3)' }}>
                       <Trash2 size={13} />
                     </button>
@@ -192,6 +193,13 @@ export default function UsersPage() {
           <Button onClick={() => { setInviting(false); setInviteToken('') }} className="w-full justify-center">Done</Button>
         </div>
       </Modal>
+
+      <ConfirmModal open={!!removing} onClose={() => setRemoving(null)}
+        onConfirm={() => removeMut.mutate(removing!.id)}
+        loading={removeMut.isPending}
+        title="Remove team member?"
+        description={<>This will revoke <strong style={{ color: 'var(--text)' }}>{removing?.name}</strong>'s access to this workspace immediately. This can't be undone.</>}
+        confirmLabel="Remove member" />
     </div>
   )
 }

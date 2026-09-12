@@ -49,9 +49,18 @@
 
 /* ══════════════════════════════════════════════════
    BASE
-   ══════════════════════════════════════════════════ */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; }
+   ══════════════════════════════════════════════════
+   IMPORTANT: this reset must live inside `@layer base`. Tailwind v4 resolves
+   cascade layers before specificity — any rule left outside a named `@layer`
+   is implicitly the highest-priority layer and beats EVERY utility class
+   (which Tailwind generates inside `@layer utilities`), no matter how
+   specific the utility's selector is. An unlayered `margin:0; padding:0`
+   here silently zeroes out every `p-*`/`px-*`/`py-*`/`m-*` class app-wide —
+   which is exactly what was happening before this was wrapped in @layer base. */
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+}
 
 body {
   background: var(--bg);
@@ -67,7 +76,10 @@ body {
    UTILITIES
    ══════════════════════════════════════════════════ */
 .g  { background: linear-gradient(135deg, var(--green) 0%, var(--green-deep) 100%); }
-.gl { box-shadow: 0 0 20px var(--green-glow), 0 0 40px rgba(16,185,129,0.08); }
+/* Tight, grounded shadow instead of an omnidirectional neon halo — the
+   "floating glow" look on every button/badge reads as generic AI-template
+   decoration; a small directional shadow reads as an actual design choice. */
+.gl { box-shadow: 0 2px 8px rgba(16,185,129,0.28), 0 1px 2px rgba(16,185,129,0.18); }
 
 /* ══════════════════════════════════════════════════
    ANIMATIONS

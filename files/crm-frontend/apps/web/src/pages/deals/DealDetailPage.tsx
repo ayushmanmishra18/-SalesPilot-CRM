@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Trophy, XCircle, User, DollarSign, Calendar } from 'lucide-react'
 import { dealsApi, usersApi } from '../../api'
-import { Button, Card, CardHeader, Modal, Input, Spinner, Badge } from '../../components/ui'
+import { Button, Card, CardHeader, Modal, Input, Spinner, Badge, ScrollFadeY } from '../../components/ui'
 import { ActivityComposer } from '../../components/activity/ActivityComposer'
 import { ActivityFeed } from '../../components/activity/ActivityFeed'
 import { NextActionWidget } from '../../components/deal/NextActionWidget'
@@ -88,9 +88,10 @@ export default function DealDetailPage() {
       {/* Body: left sidebar + right feed */}
       <div className="flex gap-4 flex-1 min-h-0 overflow-hidden">
         {/* ── LEFT ── */}
-        <div className="w-[280px] flex-shrink-0 flex flex-col gap-3 overflow-y-auto">
+        <div className="w-[280px] flex-shrink-0 flex flex-col min-h-0">
+        <ScrollFadeY className="flex flex-col gap-3">
           {/* Deal info */}
-          <Card>
+          <Card className="flex-shrink-0">
             <CardHeader title={deal.title} />
             <div className="p-4 flex flex-col gap-3">
               <div className="flex items-center gap-2.5">
@@ -122,7 +123,7 @@ export default function DealDetailPage() {
           </Card>
 
           {/* Next action */}
-          <Card padding="16px">
+          <Card padding="16px" className="flex-shrink-0">
             <div className="text-[10.5px] font-semibold uppercase tracking-wider mb-3" style={{ color:'var(--text-3)' }}>Next action</div>
             <NextActionWidget
               dealId={deal.id}
@@ -134,7 +135,7 @@ export default function DealDetailPage() {
 
           {/* Won/Lost buttons */}
           {isOpen && canWrite && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-shrink-0">
               <Button onClick={() => setClosing('won')} size="sm" className="flex-1">
                 <Trophy size={12} /> Won
               </Button>
@@ -146,7 +147,7 @@ export default function DealDetailPage() {
 
           {/* Stage history */}
           {deal.stageHistory?.length > 0 && (
-            <Card>
+            <Card className="flex-shrink-0">
               <CardHeader title="Stage history" />
               <div className="p-4 flex flex-col gap-0">
                 {[...(deal.stageHistory ?? [])].reverse().map((h: any, i: number) => (
@@ -161,12 +162,13 @@ export default function DealDetailPage() {
           )}
 
           {/* Documents */}
-          <Card>
+          <Card className="flex-shrink-0">
             <CardHeader title="Documents" />
             <div className="p-4">
               <DocumentsPanel relatedTo={{ type:'deal', id:deal.id }} canWrite={canWrite && isOpen} />
             </div>
           </Card>
+        </ScrollFadeY>
         </div>
 
         {/* ── RIGHT: Activity feed ── */}
@@ -187,7 +189,8 @@ export default function DealDetailPage() {
                 </div>
               )}
               <div className="flex-1 overflow-y-auto px-4 py-2">
-                <ActivityFeed relatedTo={{ type:'deal', id:deal.id }} canWrite={canWrite} />
+                <ActivityFeed relatedTo={{ type:'deal', id:deal.id }} canWrite={canWrite}
+                  tenantUsers={users.map((u: any) => ({ id:u.id, name:u.name }))} />
               </div>
             </div>
           </Card>

@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Search, Trash2, ChevronRight, UserCircle } from 'lucide-react'
 import { contactsApi, newIdempotencyKey } from '../../api'
-import { Button, Input, Select, Modal, EmptyState, Spinner, SlaPill, Badge } from '../../components/ui'
+import { Button, Input, Select, Modal, ConfirmModal, EmptyState, Spinner, SlaPill, Badge } from '../../components/ui'
 import { toast } from '../../components/ui/Toast'
 import type { SlaStatus } from '../../utils/sla'
 import { formatRelativeTime } from '../../utils/sla'
@@ -44,7 +44,8 @@ export default function ContactsPage() {
   const role        = useAuthStore(s => s.user?.role)
   const canWrite    = role === 'admin' || role === 'member'
 
-  const [q,          setQ]          = useState('')
+  const [qInput,     setQInput]     = useState('') // what the user is typing, updates every keystroke
+  const [q,          setQ]          = useState('') // debounced value actually sent to the API
   const [leadStatus, setLeadStatus] = useState('')
   const [source,     setSource]     = useState('')
   const [adding,     setAdding]     = useState(false)
@@ -53,6 +54,13 @@ export default function ContactsPage() {
     leadStatus: 'new', source: '', notes: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [deleting, setDeleting] = useState<{ id: string; name: string } | null>(null)
+
+  // Debounce search input — don't fire a request on every keystroke
+  useEffect(() => {
+    const t = setTimeout(() => setQ(qInput), 350)
+    return () => clearTimeout(t)
+  }, [qInput])
 
   const { data, isLoading } = useQuery({
     queryKey: ['contacts', q, leadStatus, source],
@@ -72,7 +80,7 @@ export default function ContactsPage() {
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => contactsApi.remove(id),
-    onSuccess:  () => { queryClient.invalidateQueries({ queryKey: ['contacts'] }); toast.success('Contact removed') },
+    onSuccess:  () => { queryClient.invalidateQueries({ queryKey: ['contacts'] }); toast.success('Contact removed'); setDeleting(null) },
   })
 
   if (isLoading) return <Spinner />
@@ -81,7 +89,7 @@ export default function ContactsPage() {
   return (
     <div className="flex flex-col gap-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-[16px] font-bold" style={{ color: 'var(--text)' }}>Contacts</h1>
           <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-3)' }}>{contacts.length} contacts</p>
@@ -102,8 +110,8 @@ export default function ContactsPage() {
             className="flex-1 bg-transparent text-[13px] outline-none placeholder:text-[var(--text-3)]"
             style={{ color: 'var(--text)' }}
             placeholder="Search name, email, company..."
-            value={q}
-            onChange={e => setQ(e.target.value)}
+            value={qInput}
+            onChange={e => setQInput(e.target.value)}
           />
         </div>
         <select value={leadStatus} onChange={e => setLeadStatus(e.target.value)} style={{ width: 150 }}>
@@ -171,9 +179,9 @@ export default function ContactsPage() {
                     <div className="flex items-center gap-3">
                       <ChevronRight size={13} style={{ color: 'var(--text-3)' }} />
                       {canWrite && (
-                        <button className="transition-colors"
+                        <button className="transition-colors" aria-label={`Remove ${c.name}`}
                           style={{ color: 'var(--text-3)' }}
-                          onClick={e => { e.stopPropagation(); deleteMut.mutate(c.id) }}>
+                          onClick={e => { e.stopPropagation(); setDeleting({ id: c.id, name: c.name }) }}>
                           <Trash2 size={13} />
                         </button>
                       )}
@@ -220,6 +228,13 @@ export default function ContactsPage() {
           </div>
         </div>
       </Modal>
+
+      <ConfirmModal open={!!deleting} onClose={() => setDeleting(null)}
+        onConfirm={() => deleteMut.mutate(deleting!.id)}
+        loading={deleteMut.isPending}
+        title="Remove contact?"
+        description={<>This will permanently remove <strong style={{ color: 'var(--text)' }}>{deleting?.name}</strong> and all of their linked activity. This can't be undone.</>}
+        confirmLabel="Remove contact" />
     </div>
   )
 }

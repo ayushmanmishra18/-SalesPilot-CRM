@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import React, { useEffect, useRef, useState } from 'react'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { LayoutDashboard, Users, GitBranch, Settings, LogOut, UserCog, BarChart2, Menu, X, Sun, Moon } from 'lucide-react'
 import { useAuthStore } from '../../store/auth'
 import { useThemeStore } from '../../store/theme'
@@ -58,10 +58,10 @@ function Sidebar({ close }: { close?: () => void }) {
           <div className="flex-1 min-w-0">
             <div className="text-[12px] font-semibold capitalize truncate" style={{color:'var(--text)'}}>{user?.role}</div>
           </div>
-          <button onClick={toggle} className="p-1.5 rounded-[6px] transition-colors hover:bg-[var(--surface-3)]" style={{color:'var(--text-3)'}}>
+          <button onClick={toggle} aria-label={theme==='dark'?'Switch to light theme':'Switch to dark theme'} title={theme==='dark'?'Switch to light theme':'Switch to dark theme'} className="p-1.5 rounded-[6px] transition-colors hover:bg-[var(--surface-3)]" style={{color:'var(--text-3)'}}>
             {theme==='dark'?<Sun size={12}/>:<Moon size={12}/>}
           </button>
-          <button onClick={handleLogout} className="p-1.5 rounded-[6px] transition-colors hover:bg-[var(--surface-3)]" style={{color:'var(--text-3)'}}>
+          <button onClick={handleLogout} aria-label="Sign out" title="Sign out" className="p-1.5 rounded-[6px] transition-colors hover:bg-[var(--surface-3)]" style={{color:'var(--text-3)'}}>
             <LogOut size={12}/>
           </button>
         </div>
@@ -72,7 +72,15 @@ function Sidebar({ close }: { close?: () => void }) {
 
 export function AppShell({ children }: { children:React.ReactNode }) {
   const [mob, setMob] = useState(false)
+  const mainRef  = useRef<HTMLElement>(null)
+  const location = useLocation()
   useSocket()
+
+  // React Router doesn't reset scroll on navigation, and here the page scrolls inside
+  // <main> (not the window) — so without this, navigating away from a scrolled-down
+  // list (e.g. clicking a deal from a long Pipeline list view) lands on the new page
+  // already scrolled partway down, looking like the page "jumped".
+  useEffect(() => { mainRef.current?.scrollTo(0, 0) }, [location.pathname])
 
   return (
     <div className="flex h-screen overflow-hidden" style={{background:'var(--bg)'}}>
@@ -92,7 +100,7 @@ export function AppShell({ children }: { children:React.ReactNode }) {
                 <div className="w-6 h-6 rounded-[7px] g gl"/>
                 <span className="font-bold text-[13px]" style={{color:'var(--text)'}}>SalesPilot</span>
               </div>
-              <button onClick={()=>setMob(false)} style={{color:'var(--text-3)'}}><X size={16}/></button>
+              <button onClick={()=>setMob(false)} aria-label="Close menu" style={{color:'var(--text-3)'}}><X size={16}/></button>
             </div>
             <Sidebar close={()=>setMob(false)}/>
           </aside>
@@ -104,13 +112,13 @@ export function AppShell({ children }: { children:React.ReactNode }) {
         {/* Topbar */}
         <header className="flex items-center justify-between flex-shrink-0 px-5 h-[54px]"
           style={{background:'var(--surface)',borderBottom:'1px solid var(--border)'}}>
-          <button className="md:hidden" onClick={()=>setMob(true)} style={{color:'var(--text-3)'}}><Menu size={18}/></button>
+          <button className="md:hidden" onClick={()=>setMob(true)} aria-label="Open menu" style={{color:'var(--text-3)'}}><Menu size={18}/></button>
           <div className="hidden md:block"/>
           <NotificationsBell/>
         </header>
 
         {/* Page */}
-        <main className="flex-1 overflow-auto" style={{padding:'22px 26px'}}>
+        <main ref={mainRef} className="flex-1 overflow-auto" style={{padding:'22px 26px'}}>
           <ErrorBoundary>{children}</ErrorBoundary>
         </main>
       </div>

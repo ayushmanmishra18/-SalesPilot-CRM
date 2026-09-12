@@ -2,7 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Mail, Phone, Building2, Briefcase, TrendingUp } from 'lucide-react'
 import { contactsApi, dealsApi, usersApi } from '../../api'
-import { Card, CardHeader, Spinner, SlaPill, Badge } from '../../components/ui'
+import { Card, CardHeader, Spinner, SlaPill, Badge, ScrollFadeY } from '../../components/ui'
 import { ActivityComposer } from '../../components/activity/ActivityComposer'
 import { ActivityFeed } from '../../components/activity/ActivityFeed'
 import { DocumentsPanel } from '../../components/deal/DocumentsPanel'
@@ -48,9 +48,10 @@ export default function ContactDetailPage() {
 
       <div className="flex gap-4 flex-1 min-h-0 overflow-hidden">
         {/* ── LEFT sidebar ── */}
-        <div className="w-[280px] flex-shrink-0 flex flex-col gap-3 overflow-y-auto">
+        <div className="w-[280px] flex-shrink-0 flex flex-col min-h-0">
+        <ScrollFadeY className="flex flex-col gap-3">
           {/* Profile card */}
-          <Card>
+          <Card className="flex-shrink-0">
             <div className="p-5 flex flex-col items-center text-center" style={{ borderBottom:'1px solid var(--border)' }}>
               <div className="w-14 h-14 rounded-full gradient glow flex items-center justify-center mb-3">
                 <span className="text-[20px] font-bold text-white">{contact.name[0]}</span>
@@ -104,7 +105,7 @@ export default function ContactDetailPage() {
           </Card>
 
           {/* Deals */}
-          <Card>
+          <Card className="flex-shrink-0">
             <CardHeader title={`Deals (${linkedDeals.length})`} action={
               <span className="text-[11px] font-medium" style={{ color:'var(--green)' }}>
                 {formatCurrency(totalValue, currency)}
@@ -131,12 +132,13 @@ export default function ContactDetailPage() {
           </Card>
 
           {/* Documents */}
-          <Card>
+          <Card className="flex-shrink-0">
             <CardHeader title="Documents" />
             <div className="p-4">
               <DocumentsPanel relatedTo={{ type:'contact', id:contact.id }} canWrite={canWrite} />
             </div>
           </Card>
+        </ScrollFadeY>
         </div>
 
         {/* ── RIGHT: Activity feed ── */}
@@ -153,7 +155,8 @@ export default function ContactDetailPage() {
                 </div>
               )}
               <div className="flex-1 overflow-y-auto px-4 py-2">
-                <ActivityFeed relatedTo={{ type:'contact', id:contact.id }} canWrite={canWrite} />
+                <ActivityFeed relatedTo={{ type:'contact', id:contact.id }} canWrite={canWrite}
+                  tenantUsers={users.map((u: any) => ({ id:u.id, name:u.name }))} />
               </div>
             </div>
           </Card>

@@ -22,7 +22,7 @@ export function NotificationsBell() {
 
   return (
     <div ref={ref} className="relative">
-      <button onClick={()=>setOpen(o=>!o)} className="relative w-9 h-9 flex items-center justify-center rounded-[9px] transition-colors"
+      <button onClick={()=>setOpen(o=>!o)} aria-label={unread>0?`Notifications, ${unread} unread`:'Notifications'} className="relative w-9 h-9 flex items-center justify-center rounded-[9px] transition-colors"
         style={{color:'var(--text-3)',background:open?'var(--surface-2)':'transparent',border:`1px solid ${open?'var(--border)':'transparent'}`}}>
         <Bell size={15}/>
         {unread>0&&<span className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white"

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import type { SlaStatus } from '../../utils/sla'
 import { SLA_LABELS, SLA_COLORS } from '../../utils/sla'
 
@@ -84,7 +84,7 @@ export function SlaPill({ status }: { status:SlaStatus }) {
 
 /* ══════ BADGE ══════ */
 export function Badge({ children, color='var(--green)' }: { children:React.ReactNode; color?:string }) {
-  return <span className="inline-flex items-center text-[10.5px] font-semibold px-2 py-0.5 rounded-full" style={{color,background:`${color}15`,border:`1px solid ${color}30`}}>{children}</span>
+  return <span className="inline-flex items-center leading-none text-[10px] font-bold uppercase tracking-wide px-2.5 py-[5px] rounded-full whitespace-nowrap" style={{color,background:`${color}18`,border:`1px solid ${color}38`}}>{children}</span>
 }
 
 /* ══════ CARD ══════ */
@@ -161,17 +161,86 @@ export function Modal({ open, onClose, title, children, width='480px', sub }: {
   )
 }
 
+/* ══════ CONFIRM MODAL ══════
+   Guardrail for destructive actions (delete/remove) — never fire a mutation
+   straight from a click handler. Every delete/remove flow in the app should
+   route through this so a misclick can't destroy data with zero recourse. */
+export function ConfirmModal({ open, onClose, onConfirm, title, description, confirmLabel='Delete', danger=true, loading }: {
+  open:boolean; onClose:()=>void; onConfirm:()=>void; title:string; description:React.ReactNode
+  confirmLabel?:string; danger?:boolean; loading?:boolean
+}) {
+  return (
+    <Modal open={open} onClose={onClose} title={title}>
+      <div className="flex flex-col gap-4">
+        <p className="text-[13px] leading-relaxed" style={{color:'var(--text-2)'}}>{description}</p>
+        <div className="flex gap-2.5">
+          <Button variant="ghost" onClick={onClose} className="flex-1 justify-center">Cancel</Button>
+          <Button variant={danger?'danger':'primary'} loading={loading} onClick={onConfirm} className="flex-1 justify-center">
+            {confirmLabel}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
 /* ══════ TABS ══════ */
 export function Tabs({ tabs, active, onChange }: { tabs:{key:string;label:string;icon?:any}[]; active:string; onChange:(k:string)=>void }) {
   return (
-    <div className="flex gap-0.5 p-1 rounded-[10px]" style={{background:'var(--surface-2)',border:'1px solid var(--border)'}}>
+    <div className="flex gap-1 p-1 rounded-[10px] flex-wrap max-w-full overflow-x-auto" style={{background:'var(--surface-2)',border:'1px solid var(--border)'}}>
       {tabs.map(t=>(
         <button key={t.key} onClick={()=>onChange(t.key)}
-          className="flex items-center gap-1.5 px-3 h-7 rounded-[7px] text-[12px] font-semibold transition-all"
-          style={{background:active===t.key?'var(--surface)':'transparent',color:active===t.key?'var(--green)':'var(--text-3)',boxShadow:active===t.key?'0 1px 4px rgba(0,0,0,0.25)':'none'}}>
+          className="flex items-center gap-1.5 px-3.5 h-7 rounded-[7px] text-[12px] font-semibold transition-all whitespace-nowrap flex-shrink-0"
+          style={{
+            background: active===t.key?'var(--surface)':'transparent',
+            color:      active===t.key?'var(--green)':'var(--text-3)',
+            border:     active===t.key?'1px solid var(--border-2)':'1px solid transparent',
+            boxShadow:  active===t.key?'0 1px 4px rgba(0,0,0,0.25)':'none',
+          }}
+          onMouseEnter={e=>{ if(active!==t.key) e.currentTarget.style.color='var(--text)' }}
+          onMouseLeave={e=>{ if(active!==t.key) e.currentTarget.style.color='var(--text-3)' }}>
           {t.icon&&<t.icon size={12}/>}{t.label}
         </button>
       ))}
+    </div>
+  )
+}
+
+/* ══════ SCROLL FADE (Y) ══════
+   Wraps a vertically-scrollable panel (e.g. a detail-page sidebar stacking several
+   cards) and fades its top/bottom edges in when there's more content to scroll to.
+   Without this, overflow-y:auto content that runs past a short viewport just looks
+   cut off / broken — there's no cue it's scrollable at all. `bg` should match the
+   color immediately behind the scrolling content (page bg by default). */
+export function ScrollFadeY({ children, className='', bg='var(--bg)' }: { children:React.ReactNode; className?:string; bg?:string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [state, setState] = useState({ atTop:true, atBottom:true })
+  function update() {
+    const el = ref.current
+    if (!el) return
+    const next = { atTop: el.scrollTop <= 4, atBottom: el.scrollTop + el.clientHeight >= el.scrollHeight - 4 }
+    // Only commit a state change when something actually moved — an unconditional
+    // setState on every render (e.g. inside a dependency-less useEffect) causes an
+    // infinite render loop, since this component re-renders on every state change.
+    setState(prev => (prev.atTop === next.atTop && prev.atBottom === next.atBottom) ? prev : next)
+  }
+  // Re-check once after mount/content changes (new data can change scrollHeight
+  // without the user ever scrolling) via ResizeObserver instead of an effect that
+  // reruns every render.
+  useEffect(() => {
+    update()
+    const el = ref.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => update())
+    ro.observe(el)
+    return () => ro.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [children])
+  return (
+    <div className="relative flex-1 min-h-0">
+      {!state.atTop && <div className="pointer-events-none absolute top-0 left-0 right-0 h-5 z-10" style={{background:`linear-gradient(180deg, ${bg} 0%, transparent 100%)`}}/>}
+      <div ref={ref} onScroll={update} className={`overflow-y-auto h-full ${className}`}>{children}</div>
+      {!state.atBottom && <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 z-10" style={{background:`linear-gradient(0deg, ${bg} 0%, transparent 100%)`}}/>}
     </div>
   )
 }

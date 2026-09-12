@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Shield, Plus, PauseCircle, PlayCircle, Copy, Check, Building2, Users, GitBranch } from 'lucide-react'
+import { Shield, Plus, PauseCircle, PlayCircle, Copy, Check, Building2, Users, GitBranch, MessageCircle, PhoneCall } from 'lucide-react'
 import { adminApi } from '../../api'
-import { Button, Input, Modal, Spinner, Alert, Badge } from '../../components/ui'
+import { Button, Input, Modal, Spinner, Alert, Badge, Tabs } from '../../components/ui'
 import { formatRelativeTime } from '../../utils/sla'
 
 function LoginGate({ onLogin }: { onLogin:()=>void }) {
@@ -58,11 +58,14 @@ export default function AdminPage() {
   const [form,   setForm]   = useState({name:'',adminName:'',adminEmail:''})
   const [creds,  setCreds]  = useState<{email:string;password:string}|null>(null)
   const [copied, setCopied] = useState<string|null>(null)
+  const [tab,    setTab]    = useState<'tenants'|'leads'>('tenants')
 
   const {data,isLoading} = useQuery({ queryKey:['admin-tenants'], queryFn:()=>adminApi.listTenants().then(r=>r.data), enabled:authed })
+  const {data:leadsData,isLoading:leadsLoading} = useQuery({ queryKey:['admin-leads'], queryFn:()=>adminApi.listLeads().then(r=>r.data), enabled:authed && tab==='leads' })
   const addMut = useMutation({ mutationFn:()=>adminApi.addTenant(form), onSuccess:res=>{ qc.invalidateQueries({queryKey:['admin-tenants']}); setCreds(res.data.credentials); setAdding(false); setForm({name:'',adminName:'',adminEmail:''}) } })
   const suspendMut    = useMutation({ mutationFn:(id:string)=>adminApi.suspend(id),    onSuccess:()=>qc.invalidateQueries({queryKey:['admin-tenants']}) })
   const reactivateMut = useMutation({ mutationFn:(id:string)=>adminApi.reactivate(id), onSuccess:()=>qc.invalidateQueries({queryKey:['admin-tenants']}) })
+  const contactedMut  = useMutation({ mutationFn:(id:string)=>adminApi.markContacted(id), onSuccess:()=>qc.invalidateQueries({queryKey:['admin-leads']}) })
 
   function copy(val:string,k:string) { navigator.clipboard.writeText(val); setCopied(k); setTimeout(()=>setCopied(null),2000) }
 
@@ -84,12 +87,18 @@ export default function AdminPage() {
           <div><div className="font-bold text-[14px]" style={{color:'var(--text)'}}>Super Admin Console</div></div>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" onClick={()=>setAdding(true)}><Plus size={13}/>Add tenant</Button>
+          {tab==='tenants' && <Button size="sm" onClick={()=>setAdding(true)}><Plus size={13}/>Add tenant</Button>}
           <Button size="sm" variant="ghost" onClick={()=>{localStorage.removeItem('adminToken');setAuthed(false)}}>Sign out</Button>
         </div>
       </header>
 
       <div className="p-6 max-w-6xl mx-auto flex flex-col gap-5">
+        <Tabs tabs={[
+          { key:'tenants', label:'Tenants', icon:Building2 },
+          { key:'leads',   label:'Leads',   icon:MessageCircle },
+        ]} active={tab} onChange={(k)=>setTab(k as 'tenants'|'leads')} />
+
+        {tab==='tenants' && <>
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4">
           {stats.map(s=>(
@@ -145,6 +154,48 @@ export default function AdminPage() {
               </table>
             )}
           </div>
+        )}
+        </>}
+
+        {tab==='leads' && (
+          leadsLoading ? <Spinner/> : (
+            <div className="rounded-[12px] overflow-hidden" style={{background:'var(--surface)',border:'1px solid var(--border)'}}>
+              <div className="px-5 py-3.5 flex items-center justify-between" style={{borderBottom:'1px solid var(--border)',background:'var(--surface-2)'}}>
+                <div className="font-semibold text-[13px]" style={{color:'var(--text)'}}>Leads ({leadsData?.leads?.length ?? 0})</div>
+              </div>
+              {(leadsData?.leads ?? []).length===0 ? (
+                <div className="py-16 text-center text-[13px]" style={{color:'var(--text-3)'}}>No leads yet — submissions from the landing page's contact form show up here</div>
+              ) : (
+                <table>
+                  <thead><tr>
+                    {['Name','Phone','Company','Team size','Challenge','Received',''].map(h=><th key={h}>{h}</th>)}
+                  </tr></thead>
+                  <tbody>
+                    {leadsData!.leads.map((l:any)=>(
+                      <tr key={l.id}>
+                        <td className="text-[13px] font-semibold" style={{color:'var(--text)'}}>{l.name}</td>
+                        <td>
+                          <a href={`https://wa.me/${l.phone.replace(/\D/g,'')}`} target="_blank" rel="noreferrer"
+                            className="flex items-center gap-1.5 text-[12.5px] hover:opacity-80" style={{color:'var(--green)'}}>
+                            <PhoneCall size={12}/>{l.phone}
+                          </a>
+                        </td>
+                        <td className="text-[12.5px]" style={{color:'var(--text-2)'}}>{l.company??'—'}</td>
+                        <td className="text-[12.5px]" style={{color:'var(--text-2)'}}>{l.teamSize??'—'}</td>
+                        <td className="text-[12px] max-w-[240px] truncate" style={{color:'var(--text-3)'}} title={l.challenge??''}>{l.challenge??'—'}</td>
+                        <td className="text-[11.5px]" style={{color:'var(--text-3)'}}>{formatRelativeTime(l.createdAt)}</td>
+                        <td>
+                          {l.contacted
+                            ? <Badge color="#10B981">Contacted</Badge>
+                            : <button onClick={()=>contactedMut.mutate(l.id)} className="text-[11px] font-medium" style={{color:'var(--green)'}}>Mark contacted</button>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )
         )}
       </div>
 

@@ -109,12 +109,12 @@ export default function AnalyticsPage() {
   const currency = pd?.currency ?? 'USD'
 
   const sla = pd?.slaBreakdown ?? {}
-  const totalOpen = pd?.openCount ?? 1
+  const totalOpen = pd?.openCount || 1 // `|| 1` (not `??`) — 0 open deals must also fall back, or ratios below divide by zero → NaN
 
   return (
     <div className="flex flex-col gap-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-[16px] font-bold" style={{ color: 'var(--text)' }}>Analytics</h1>
           <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-3)' }}>

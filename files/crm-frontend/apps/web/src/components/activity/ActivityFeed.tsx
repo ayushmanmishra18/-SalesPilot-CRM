@@ -8,7 +8,24 @@ import { useState } from 'react'
 const ICON:any  = {note:FileText,task:CheckSquare,comment:MessageCircle,email:Mail}
 const COLOR:any = {note:'#7B7A95',task:'#3B82F6',comment:'#10B981',email:'#F59E0B'}
 
-export function ActivityFeed({ relatedTo, canWrite }:{relatedTo:{type:'contact'|'deal';id:string};canWrite:boolean}) {
+// Replaces raw "@[publicId]" mention tokens with the "@Name" the user actually typed —
+// tenantUsers maps publicId -> display name so mentions never show a raw UUID to the reader.
+function renderMentions(text: string, tenantUsers: { id: string; name: string }[]) {
+  if (!text.includes('@[')) return text
+  const parts = text.split(/(@\[[^\]]+\])/g)
+  return parts.map((part, i) => {
+    const match = part.match(/^@\[([^\]]+)\]$/)
+    if (!match) return part
+    const user = tenantUsers.find(u => u.id === match[1])
+    return (
+      <span key={i} className="font-semibold" style={{ color: 'var(--green)' }}>
+        @{user?.name ?? 'Unknown user'}
+      </span>
+    )
+  })
+}
+
+export function ActivityFeed({ relatedTo, canWrite, tenantUsers=[] }:{relatedTo:{type:'contact'|'deal';id:string};canWrite:boolean;tenantUsers?:{id:string;name:string}[]} ) {
   const qc  = useQueryClient()
   const key = `${relatedTo.type}:${relatedTo.id}`
   const [converting,setConverting] = useState<string|null>(null)
@@ -62,7 +79,7 @@ export function ActivityFeed({ relatedTo, canWrite }:{relatedTo:{type:'contact'|
               ):(
                 <>
                   {a.type==='email'&&a.emailSubject&&<div className="text-[11.5px] mb-1" style={{color:'var(--text-3)'}}>To: {a.emailTo} · {a.emailSubject}</div>}
-                  <p className="text-[13px] leading-relaxed" style={{color:'var(--text)'}}>{a.text}</p>
+                  <p className="text-[13px] leading-relaxed" style={{color:'var(--text)'}}>{renderMentions(a.text, tenantUsers)}</p>
                   {canWrite&&(a.type==='comment'||a.type==='note')&&!a.convertedTo&&(
                     <div className="mt-2">
                       {converting===a.id?(

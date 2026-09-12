@@ -88,9 +88,9 @@ export function ActivityComposer({ relatedTo, tenantUsers=[], onCreated }: {
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between px-3.5 py-2.5" style={{borderTop:'1px solid var(--border)'}}>
-        <span className="text-[10.5px]" style={{color:'var(--text-3)'}}>⌘↵ to send</span>
-        <Button size="sm" onClick={send} loading={mut.isPending} disabled={!text.trim()}>
+      <div className="flex items-center justify-between gap-2 px-3.5 py-2.5" style={{borderTop:'1px solid var(--border)'}}>
+        <span className="text-[10.5px] flex-shrink-0" style={{color:'var(--text-3)'}}>⌘↵ to send</span>
+        <Button size="sm" onClick={send} loading={mut.isPending} disabled={!text.trim()} className="flex-shrink-0">
           <Send size={11}/>{tab==='email'?'Send email':tab==='task'?'Create task':'Post'}
         </Button>
       </div>

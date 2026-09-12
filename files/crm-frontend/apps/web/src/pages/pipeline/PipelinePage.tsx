@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { Plus, LayoutGrid, List, Trophy, XCircle } from 'lucide-react'
-import { dealsApi, settingsApi, newIdempotencyKey } from '../../api'
-import { Button, Modal, Input, Select, EmptyState, Spinner, SlaPill, Card } from '../../components/ui'
+import { dealsApi, settingsApi, usersApi, newIdempotencyKey } from '../../api'
+import { Button, Modal, Input, Select, EmptyState, Spinner, SlaPill, Card, Badge } from '../../components/ui'
 import { toast } from '../../components/ui/Toast'
 import type { SlaStatus } from '../../utils/sla'
 import { formatCurrency } from '../../utils/sla'
@@ -22,9 +22,25 @@ export default function PipelinePage() {
   const [closing,  setClosing]  = useState<{id:string;title:string;mode:'won'|'lost'}|null>(null)
   const [lostReason, setLostReason] = useState('')
 
+  // Board scroll-edge affordance — the kanban strip scrolls horizontally on its own
+  // (not the whole page), but with no visual cue that's easy to miss. Track scroll
+  // position so we can fade in/out "more content" hints at either edge.
+  const boardRef = useRef<HTMLDivElement>(null)
+  const [scrollState, setScrollState] = useState({ atStart: true, atEnd: true })
+  function updateScrollState() {
+    const el = boardRef.current
+    if (!el) return
+    const next = { atStart: el.scrollLeft <= 4, atEnd: el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 }
+    // Guard against a no-op setState — calling it unconditionally on every render
+    // (via a dependency-less useEffect) causes an infinite render loop.
+    setScrollState(prev => (prev.atStart === next.atStart && prev.atEnd === next.atEnd) ? prev : next)
+  }
+
   const { data: settingsData } = useQuery({ queryKey: ['settings'], queryFn: () => settingsApi.get().then(r => r.data) })
   const { data: openData, isLoading } = useQuery({ queryKey: ['deals','open'], queryFn: () => dealsApi.list({ status: 'open' }).then(r => r.data) })
   const { data: wonData }  = useQuery({ queryKey: ['deals','won'],  queryFn: () => dealsApi.list({ status: 'won' }).then(r => r.data) })
+  const { data: usersData } = useQuery({ queryKey: ['users'], queryFn: () => usersApi.list().then(r => r.data) })
+  const users = usersData?.users ?? []
 
   const tenant   = settingsData?.tenant
   const stages   = tenant?.stages ?? [{ name:'New',order:0,isTerminal:false },{ name:'Contacted',order:1,isTerminal:false },{ name:'Proposal',order:2,isTerminal:false },{ name:'Negotiation',order:3,isTerminal:false }]
@@ -34,6 +50,16 @@ export default function PipelinePage() {
   const deals    = openData?.deals ?? []
   const wonDeals = wonData?.deals  ?? []
   const currency = deals[0]?.currency ?? wonDeals[0]?.currency ?? (tenant?.currency ?? 'USD')
+
+  useEffect(() => {
+    updateScrollState()
+    const el = boardRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => updateScrollState())
+    ro.observe(el)
+    return () => ro.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, deals.length, wonDeals.length])
 
   const allCols  = [...stageNames, 'Won']
 
@@ -57,7 +83,7 @@ export default function PipelinePage() {
   return (
     <div className="flex flex-col gap-4 h-full">
       {/* Header */}
-      <div className="flex items-center justify-between flex-shrink-0">
+      <div className="flex items-center justify-between flex-wrap gap-3 flex-shrink-0">
         <div>
           <h1 className="text-[16px] font-bold" style={{ color:'var(--text)' }}>Pipeline</h1>
           <p className="text-[12px] mt-0.5" style={{ color:'var(--text-3)' }}>
@@ -68,7 +94,7 @@ export default function PipelinePage() {
           {/* View toggle */}
           <div className="flex rounded-[8px] overflow-hidden" style={{ border:'1px solid var(--border)' }}>
             {([['board', LayoutGrid], ['list', List]] as const).map(([v, Icon]) => (
-              <button key={v} onClick={() => setView(v)}
+              <button key={v} onClick={() => setView(v)} aria-label={v==='board'?'Board view':'List view'} aria-pressed={view===v}
                 className="flex items-center justify-center w-8 h-8 transition-colors"
                 style={{ background: view===v ? 'var(--green)' : 'var(--surface)', color: view===v ? '#fff' : 'var(--text-3)' }}>
                 <Icon size={13} />
@@ -85,14 +111,25 @@ export default function PipelinePage() {
 
       {/* ── BOARD VIEW ── */}
       {view === 'board' && (
-        <div className="flex gap-3 overflow-x-auto pb-3 flex-1 min-h-0" style={{ alignItems:'flex-start' }}>
+        <div className="relative flex-1 min-h-0">
+          {/* Edge fades signal "this board scrolls sideways", not the whole page */}
+          {!scrollState.atStart && (
+            <div className="pointer-events-none absolute left-0 top-0 bottom-3 w-10 z-10"
+              style={{ background: 'linear-gradient(90deg, var(--bg) 0%, transparent 100%)' }} />
+          )}
+          {!scrollState.atEnd && (
+            <div className="pointer-events-none absolute right-0 top-0 bottom-3 w-10 z-10"
+              style={{ background: 'linear-gradient(270deg, var(--bg) 0%, transparent 100%)' }} />
+          )}
+          <div ref={boardRef} onScroll={updateScrollState}
+            className="flex gap-2.5 overflow-x-auto pb-3 h-full" style={{ alignItems:'flex-start' }}>
           {allCols.map(col => {
             const isWon     = col === 'Won'
             const colDeals  = isWon ? wonDeals : deals.filter((d: any) => d.stage === col)
             const colValue  = colDeals.reduce((s: number, d: any) => s + d.value, 0)
             return (
               <div key={col} className="flex-shrink-0 flex flex-col rounded-[12px] overflow-hidden"
-                style={{ width:230, background:'var(--surface)', border:`1px solid ${isWon?'rgba(16,185,129,0.4)':'var(--border)'}`, boxShadow:isWon?'0 0 16px rgba(16,185,129,0.08)':'none', maxHeight:'calc(100vh - 200px)' }}
+                style={{ width:212, background:'var(--surface)', border:`1px solid ${isWon?'rgba(16,185,129,0.4)':'var(--border)'}`, boxShadow:isWon?'0 0 16px rgba(16,185,129,0.08)':'none', maxHeight:'calc(100vh - 200px)' }}
                 onDragOver={e => e.preventDefault()}
                 onDrop={() => canWrite && dragDeal && !isWon && moveMut.mutate({ id: dragDeal.id, stage: col })}>
 
@@ -120,14 +157,19 @@ export default function PipelinePage() {
                       onDragEnd={() => setDragDeal(null)}
                       onClick={() => navigate(`/deals/${deal.id}`)}
                       className="rounded-[10px] p-3 cursor-pointer transition-all hover:translate-y-[-1px]"
-                      style={{ background:'var(--bg)', border:`1px solid ${deal.slaStatus==='overdue'?'rgba(228,72,63,0.4)':'var(--border)'}` }}>
+                      style={{
+                        background: 'var(--surface-2)',
+                        border: `1px solid ${deal.slaStatus === 'overdue' ? 'rgba(228,72,63,0.4)' : 'var(--border-2)'}`,
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                      }}>
                       <div className="text-[12.5px] font-semibold mb-1.5 leading-snug" style={{ color:'var(--text)' }}>
                         {deal.title}
                       </div>
                       <div className="text-[12px] font-medium mb-2" style={{ color:'var(--green)' }}>
                         {formatCurrency(deal.value, currency)}
                       </div>
-                      <SlaPill status={deal.slaStatus as SlaStatus} />
+                      {/* SLA tracking is meaningless once a deal is closed — show a plain status pill instead */}
+                      {isWon ? <Badge color="#10B981">Won</Badge> : <SlaPill status={deal.slaStatus as SlaStatus} />}
                       {canWrite && !isWon && (
                         <div className="flex gap-1 mt-2 pt-2" style={{ borderTop:'1px solid var(--border)' }}>
                           <button className="flex-1 text-[10px] py-1 rounded-[6px] font-medium transition-colors flex items-center justify-center gap-1"
@@ -161,6 +203,7 @@ export default function PipelinePage() {
               </div>
             )
           })}
+          </div>
         </div>
       )}
 
@@ -194,7 +237,9 @@ export default function PipelinePage() {
                       {formatCurrency(d.value, currency)}
                     </td>
                     <td className="px-4 py-3"><SlaPill status={d.slaStatus as SlaStatus} /></td>
-                    <td className="px-4 py-3 text-[12px]" style={{ color:'var(--text-3)' }}>{d.ownerId?.slice(-6)}</td>
+                    <td className="px-4 py-3 text-[12px]" style={{ color:'var(--text-3)' }}>
+                      {users.find((u: any) => u.id === d.ownerId)?.name ?? '—'}
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <span className="text-[11px]" style={{ color:'var(--text-3)' }}>→</span>
                     </td>

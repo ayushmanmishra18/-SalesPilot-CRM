@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Sun, Moon, Mail, ChevronDown, Check } from 'lucide-react'
+import {
+  Sun, Moon, Mail, ChevronDown, Check,
+  KanbanSquare, Clock, Smartphone, History, BarChart3, Users2,
+  MessageSquare, Send, FolderOpen, Trophy, BellRing, ShieldCheck,
+  Zap, Lock, Headset, TrendingUp, MapPin,
+} from 'lucide-react'
 import { useThemeStore } from '../../store/theme'
 
 /* ─── tiny helpers ─────────────────────────────────────────────── */
@@ -26,11 +31,6 @@ function Pill({ children, color = 'green' }: { children: React.ReactNode; color?
 function PipelineMock() {
   return (
     <div style={{ background: '#0E0E17', borderRadius: 20, padding: 20, border: '1px solid #1E1E28' }}>
-      <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
-        <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#E4483F', display: 'block' }} />
-        <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#F5A524', display: 'block' }} />
-        <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#2FAE60', display: 'block' }} />
-      </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
         {[
           {
@@ -76,11 +76,6 @@ function PipelineMock() {
 function DashMock() {
   return (
     <div style={{ background: '#0E0E17', borderRadius: 20, padding: 20, border: '1px solid #1E1E28' }}>
-      <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
-        <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#E4483F', display: 'block' }} />
-        <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#F5A524', display: 'block' }} />
-        <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#2FAE60', display: 'block' }} />
-      </div>
       <div style={{ fontSize: 11, fontWeight: 700, color: '#EDEDF4', marginBottom: 4 }}>Good morning, Rahul ☀</div>
       <div style={{ fontSize: 9.5, color: '#E4483F', fontWeight: 600, marginBottom: 12 }}>3 follow-ups need your attention today</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 7, marginBottom: 12 }}>
@@ -116,11 +111,6 @@ function DashMock() {
 function ActivityMock() {
   return (
     <div style={{ background: '#0E0E17', borderRadius: 20, padding: 20, border: '1px solid #1E1E28' }}>
-      <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
-        <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#E4483F', display: 'block' }} />
-        <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#F5A524', display: 'block' }} />
-        <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#2FAE60', display: 'block' }} />
-      </div>
       {[
         { icon: '📝', type: 'Note', text: 'Called Rajesh — budget approved, needs CFO sign-off by Friday. Very positive call.', time: 'Priya · 2 hrs ago', bg: 'rgba(16,185,129,.12)' },
         { icon: '💬', type: 'Comment', text: '@Rahul — should we offer 5% discount to close this week?', time: 'Tom · 1 hr ago', bg: 'rgba(76,139,245,.12)' },
@@ -149,11 +139,6 @@ function AnalyticsMock() {
   ]
   return (
     <div style={{ background: '#0E0E17', borderRadius: 20, padding: 20, border: '1px solid #1E1E28' }}>
-      <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
-        <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#E4483F', display: 'block' }} />
-        <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#F5A524', display: 'block' }} />
-        <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#2FAE60', display: 'block' }} />
-      </div>
       <div style={{ fontSize: 11, fontWeight: 700, color: '#EDEDF4', marginBottom: 4 }}>Pipeline conversion rates</div>
       <div style={{ fontSize: 9, color: '#7B7A95', marginBottom: 16 }}>Where are you winning and losing deals?</div>
       {bars.map(b => (
@@ -204,7 +189,6 @@ export default function LandingPage() {
   const border  = isDark ? '#1E1E28' : '#E2E4EC'
   const text    = isDark ? '#EDEDF4' : '#12141C'
   const muted   = isDark ? '#7B7A95' : '#5A5F7A'
-  const glow    = 'rgba(16,185,129,.18)'
 
   useEffect(() => {
     const fn = () => setNavSolid(window.scrollY > 60)
@@ -215,6 +199,20 @@ export default function LandingPage() {
   function submitForm(e: React.FormEvent) {
     e.preventDefault()
     const msg = `Hi! I'm interested in SalesPilot CRM.\n\nName: ${formData.name}\nPhone: ${formData.phone}${formData.company ? '\nCompany: ' + formData.company : ''}${formData.size ? '\nTeam size: ' + formData.size : ''}${formData.challenge ? '\n\nChallenge: ' + formData.challenge : ''}`
+    // Persist the lead server-side FIRST — the WhatsApp handoff below is a convenience
+    // channel, not the record of truth. If a visitor opens WhatsApp and never hits send,
+    // the submission must not just vanish.
+    const apiBase = import.meta.env['VITE_API_URL'] ?? 'http://localhost:3001'
+    fetch(`${apiBase}/public/leads`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: formData.name, phone: formData.phone,
+        company: formData.company || undefined,
+        teamSize: formData.size || undefined,
+        challenge: formData.challenge || undefined,
+      }),
+    }).catch(() => {}) // best-effort — never block the WhatsApp handoff on this
     window.open('https://wa.me/919555790855?text=' + encodeURIComponent(msg), '_blank')
     setFormSent(true)
   }
@@ -264,7 +262,7 @@ export default function LandingPage() {
             {/* App login */}
             <button onClick={() => navigate('/login')} style={{
               fontSize: 13, fontWeight: 600, color: '#fff', padding: '9px 20px', borderRadius: 100,
-              background: 'linear-gradient(135deg,#10B981,#059669)', boxShadow: `0 0 18px ${glow}`,
+              background: 'linear-gradient(135deg,#10B981,#059669)', boxShadow: '0 2px 8px rgba(16,185,129,0.25)',
               border: 'none', cursor: 'pointer', fontFamily: "'Sora', sans-serif",
             }}>
               Sign in
@@ -332,8 +330,8 @@ export default function LandingPage() {
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, flexWrap: 'wrap', marginBottom: 16 }}>
           <a href="https://wa.me/919555790855?text=Hi%2C%20I%27m%20interested%20in%20SalesPilot%20CRM" target="_blank" rel="noreferrer"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 600, color: '#fff', padding: '15px 32px', borderRadius: 999, background: 'linear-gradient(135deg,#10B981,#059669)', boxShadow: `0 0 32px ${glow}`, textDecoration: 'none', fontFamily: "'Sora', sans-serif" }}>
-            💬 Chat with us on WhatsApp
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 600, color: '#fff', padding: '15px 32px', borderRadius: 999, background: 'linear-gradient(135deg,#10B981,#059669)', boxShadow: '0 4px 14px rgba(16,185,129,0.28)', textDecoration: 'none', fontFamily: "'Sora', sans-serif" }}>
+            Chat with us on WhatsApp
           </a>
           <a href="#how"
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 15, fontWeight: 500, color: text, padding: '15px 28px', borderRadius: 999, border: `1px solid ${border}`, textDecoration: 'none' }}>
@@ -358,12 +356,12 @@ export default function LandingPage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 1, marginTop: 70, background: border, borderRadius: 24, overflow: 'hidden' }}>
             {[
-              { emoji: '🤷', title: '"Who was supposed to call them?"', body: 'Follow-ups fall through the cracks when they\'re tracked in someone\'s head, a notebook, or a WhatsApp message that gets buried three days later.' },
-              { emoji: '📊', title: '"How\'s the pipeline looking?"', body: 'The manager has to ask three people, check two spreadsheets, and still isn\'t confident. Nobody has the full picture at the same time.' },
-              { emoji: '💸', title: '"We lost that deal? Why?"', body: 'By the time you realise a deal went cold, it\'s already too late. There was no alert, no reminder, and no one was watching.' },
+              { n: '01', title: '"Who was supposed to call them?"', body: 'Follow-ups fall through the cracks when they\'re tracked in someone\'s head, a notebook, or a WhatsApp message that gets buried three days later.' },
+              { n: '02', title: '"How\'s the pipeline looking?"', body: 'The manager has to ask three people, check two spreadsheets, and still isn\'t confident. Nobody has the full picture at the same time.' },
+              { n: '03', title: '"We lost that deal? Why?"', body: 'By the time you realise a deal went cold, it\'s already too late. There was no alert, no reminder, and no one was watching.' },
             ].map(p => (
               <div key={p.title} style={{ padding: '44px 36px', background: bg, textAlign: 'left' }}>
-                <span style={{ fontSize: 36, display: 'block', marginBottom: 20 }}>{p.emoji}</span>
+                <span style={{ fontFamily: "'Sora', sans-serif", fontSize: 30, fontWeight: 800, display: 'block', marginBottom: 20, color: 'transparent', WebkitTextStroke: `1.5px ${border}` }}>{p.n}</span>
                 <h3 style={{ fontFamily: "'Sora', sans-serif", fontSize: 18, fontWeight: 700, color: text, marginBottom: 12, letterSpacing: -.3, lineHeight: 1.2 }}>{p.title}</h3>
                 <p style={{ fontSize: 14, color: muted, lineHeight: 1.7 }}>{p.body}</p>
               </div>
@@ -447,23 +445,23 @@ export default function LandingPage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 2, marginTop: 60, background: border, borderRadius: 28, overflow: 'hidden' }}>
             {[
-              { e: '📋', t: 'Visual Pipeline Board', d: 'Drag your deals from stage to stage. See your whole pipeline on one screen — new leads, follow-up needed, proposals sent, deals closing. No more hunting through emails.' },
-              { e: '⏰', t: 'Follow-up Reminders', d: 'Set a next action on any deal. When it\'s due, the deal turns amber. When it\'s overdue, it turns red. Your team always knows what needs to happen today.' },
-              { e: '📱', t: 'Works on Any Device', d: 'Log a call from your car park. Check the pipeline from a client\'s waiting room. Mark a deal won right after signing. SalesPilot works on phone, tablet, and laptop.' },
-              { e: '📝', t: 'Complete Activity History', d: 'Every call note, every email, every meeting — all logged against the deal in order. Anyone on the team can see exactly what happened and when.' },
-              { e: '📊', t: 'Pipeline Analytics', d: 'See your conversion rates at each stage. Know which stage you lose deals at. See which months are strongest. Real numbers that help you make better decisions.' },
-              { e: '👥', t: 'Team Performance View', d: 'See which rep has the highest win rate, who is most active, and who needs support. Managers get full visibility without having to ask anyone.' },
-              { e: '💬', t: 'Team Collaboration', d: 'Comment on deals and @mention colleagues. Convert a comment into a task with one click. Everyone stays in the loop without extra meetings.' },
-              { e: '📧', t: 'Send Emails from Inside the App', d: 'Connect your Gmail and send emails directly from a deal page. Every email is automatically saved to the deal — your team can see what was sent and when.' },
-              { e: '📁', t: 'Documents per Deal', d: 'Attach proposals, contracts, pricing sheets, and brochures directly to each deal. Stop hunting for "that PDF I sent last Tuesday".' },
-              { e: '🏆', t: 'Lead Scoring', d: 'Know which leads are most likely to convert. Score leads based on how they\'ve engaged so your team focuses energy where it counts most.' },
-              { e: '🔔', t: 'Real-time Notifications', d: 'Get notified the moment someone @mentions you, assigns you a task, or a deal changes status. No more checking back to see what happened.' },
-              { e: '🔒', t: 'Secure & Private', d: 'Your company\'s data is completely separate from every other company\'s. Only your team can see your deals. We take data security seriously from day one.' },
+              { icon: KanbanSquare, t: 'Visual Pipeline Board', d: 'Drag your deals from stage to stage. See your whole pipeline on one screen — new leads, follow-up needed, proposals sent, deals closing. No more hunting through emails.' },
+              { icon: Clock, t: 'Follow-up Reminders', d: 'Set a next action on any deal. When it\'s due, the deal turns amber. When it\'s overdue, it turns red. Your team always knows what needs to happen today.' },
+              { icon: Smartphone, t: 'Works on Any Device', d: 'Log a call from your car park. Check the pipeline from a client\'s waiting room. Mark a deal won right after signing. SalesPilot works on phone, tablet, and laptop.' },
+              { icon: History, t: 'Complete Activity History', d: 'Every call note, every email, every meeting — all logged against the deal in order. Anyone on the team can see exactly what happened and when.' },
+              { icon: BarChart3, t: 'Pipeline Analytics', d: 'See your conversion rates at each stage. Know which stage you lose deals at. See which months are strongest. Real numbers that help you make better decisions.' },
+              { icon: Users2, t: 'Team Performance View', d: 'See which rep has the highest win rate, who is most active, and who needs support. Managers get full visibility without having to ask anyone.' },
+              { icon: MessageSquare, t: 'Team Collaboration', d: 'Comment on deals and @mention colleagues. Convert a comment into a task with one click. Everyone stays in the loop without extra meetings.' },
+              { icon: Send, t: 'Send Emails from Inside the App', d: 'Connect your Gmail and send emails directly from a deal page. Every email is automatically saved to the deal — your team can see what was sent and when.' },
+              { icon: FolderOpen, t: 'Documents per Deal', d: 'Attach proposals, contracts, pricing sheets, and brochures directly to each deal. Stop hunting for "that PDF I sent last Tuesday".' },
+              { icon: Trophy, t: 'Lead Scoring', d: 'Know which leads are most likely to convert. Score leads based on how they\'ve engaged so your team focuses energy where it counts most.' },
+              { icon: BellRing, t: 'Real-time Notifications', d: 'Get notified the moment someone @mentions you, assigns you a task, or a deal changes status. No more checking back to see what happened.' },
+              { icon: ShieldCheck, t: 'Secure & Private', d: 'Your company\'s data is completely separate from every other company\'s. Only your team can see your deals. We take data security seriously from day one.' },
             ].map(f => (
               <div key={f.t} style={{ padding: '36px 32px', background: bg, textAlign: 'left', transition: 'background .3s' }}
                 onMouseEnter={e => (e.currentTarget.style.background = surf)}
                 onMouseLeave={e => (e.currentTarget.style.background = bg)}>
-                <span style={{ fontSize: 30, display: 'block', marginBottom: 16 }}>{f.e}</span>
+                <f.icon size={22} strokeWidth={1.75} color="#10B981" style={{ display: 'block', marginBottom: 18 }} />
                 <h3 style={{ fontFamily: "'Sora', sans-serif", fontSize: 16, fontWeight: 700, color: text, marginBottom: 8, letterSpacing: -.2 }}>{f.t}</h3>
                 <p style={{ fontSize: 13.5, color: muted, lineHeight: 1.7 }}>{f.d}</p>
               </div>
@@ -508,47 +506,20 @@ export default function LandingPage() {
 
         <div style={{ maxWidth: 780, margin: '64px auto 0', display: 'flex', flexDirection: 'column' }}>
           {[
-            { e: '⚡', t: 'You\'re live in 24 hours, not 24 days', d: 'We set everything up for you. You give us your team\'s names and tell us your pipeline stages — we handle the rest. No IT team needed, no training sessions that drag on for weeks.' },
-            { e: '🔒', t: 'Your data belongs to you alone', d: 'Each company\'s data is completely locked away from everyone else\'s — including us. Your leads, your deals, your conversations. Nobody else can ever see them, not even by accident.' },
-            { e: '🧑‍💼', t: 'Real people, not a ticket system', d: 'When something isn\'t working, you WhatsApp us directly. You\'re talking to the people who built this. We respond fast because your problem is our problem too.' },
-            { e: '💰', t: 'One missed deal pays for a whole year', d: 'At ₹500 per person per month, a team of 5 costs ₹2,500/month. If SalesPilot helps you close one extra deal per month — and it will — it has already paid for itself many times over.' },
-            { e: '📱', t: 'Your team will actually use it', d: 'We tried two other CRMs before this — our clients tell us. Both were so complicated the team stopped using them after a week. SalesPilot is the first one where everyone actually logs in every day.' },
-            { e: '🇮🇳', t: 'Built for Indian sales teams', d: 'We understand the way Indian sales teams work — the follow-up culture, the WhatsApp-first communication, the relationship-driven deals. This tool is designed for how you actually sell, not how a Silicon Valley playbook says you should.' },
+            { icon: Zap, t: 'You\'re live in 24 hours, not 24 days', d: 'We set everything up for you. You give us your team\'s names and tell us your pipeline stages — we handle the rest. No IT team needed, no training sessions that drag on for weeks.' },
+            { icon: Lock, t: 'Your data belongs to you alone', d: 'Each company\'s data is completely locked away from everyone else\'s — including us. Your leads, your deals, your conversations. Nobody else can ever see them, not even by accident.' },
+            { icon: Headset, t: 'Real people, not a ticket system', d: 'When something isn\'t working, you WhatsApp us directly. You\'re talking to the people who built this. We respond fast because your problem is our problem too.' },
+            { icon: TrendingUp, t: 'One missed deal pays for a whole year', d: 'At ₹500 per person per month, a team of 5 costs ₹2,500/month. If SalesPilot helps you close one extra deal per month — and it will — it has already paid for itself many times over.' },
+            { icon: Smartphone, t: 'Your team will actually use it', d: 'We tried two other CRMs before this — our clients tell us. Both were so complicated the team stopped using them after a week. SalesPilot is the first one where everyone actually logs in every day.' },
+            { icon: MapPin, t: 'Built for Indian sales teams', d: 'We understand the way Indian sales teams work — the follow-up culture, the WhatsApp-first communication, the relationship-driven deals. This tool is designed for how you actually sell, not how a Silicon Valley playbook says you should.' },
           ].map((item, i) => (
             <div key={item.t} style={{ display: 'grid', gridTemplateColumns: '56px 1fr', gap: 24, alignItems: 'flex-start', padding: '32px 0', borderBottom: i < 5 ? `1px solid ${border}` : 'none' }}>
-              <span style={{ fontSize: 28, paddingTop: 4 }}>{item.e}</span>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(16,185,129,.1)', border: '1px solid rgba(16,185,129,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <item.icon size={19} strokeWidth={1.75} color="#10B981" />
+              </div>
               <div>
                 <h4 style={{ fontFamily: "'Sora', sans-serif", fontSize: 18, fontWeight: 700, color: text, marginBottom: 8, letterSpacing: -.3 }}>{item.t}</h4>
                 <p style={{ fontSize: 14, color: muted, lineHeight: 1.75 }}>{item.d}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── TESTIMONIALS ─────────────────────────────────── */}
-      <section style={{ background: surf2, padding: '100px 0' }}>
-        <div style={{ textAlign: 'center', padding: '0 28px', marginBottom: 60 }}>
-          <p style={{ fontSize: 11.5, fontWeight: 600, color: '#10B981', letterSpacing: 2, marginBottom: 16, fontFamily: "'Sora', sans-serif" }}>WHAT OUR CLIENTS SAY</p>
-          {sectionH('Teams that stopped losing deals')}
-        </div>
-        <div style={{ display: 'flex', gap: 20, overflowX: 'auto', padding: '0 28px 16px', scrollbarWidth: 'none' }}>
-          {[
-            { i: 'RS', n: 'Rahul Sharma', r: 'Sales Head, TechVentures', q: 'Before SalesPilot, our follow-ups were in a WhatsApp group and a shared Google sheet that nobody updated. Now the whole team sees the same board and we\'ve closed 3 deals this month that would have gone cold.' },
-            { i: 'PM', n: 'Priya Mehta', r: 'Founder, GrowthFirst', q: 'I used to ask my team "what\'s happening with XYZ client?" every single day. Now I just open the app and I can see exactly where every deal stands. Saves me an hour a day at least.' },
-            { i: 'AK', n: 'Amit Kumar', r: 'Director, BuildBetter Solutions', q: 'We tried two other CRMs before this. Both were so complicated our team stopped using them after a week. SalesPilot is the first one where everyone actually uses it every day without me forcing them.' },
-            { i: 'NK', n: 'Neha Kapoor', r: 'Regional Manager, FastGrow India', q: 'Our team is on the road most of the time. The fact that SalesPilot works on mobile means reps log calls immediately — instead of "I\'ll update it later" which used to mean never.' },
-            { i: 'VS', n: 'Vikram Singh', r: 'Co-founder, MarketPulse', q: 'The analytics showed us that we were losing 60% of deals at the proposal stage. We fixed our proposal template. Win rate went up 22 points in 3 months. That insight alone was worth everything.' },
-          ].map(t => (
-            <div key={t.n} style={{ flexShrink: 0, width: 340, background: bg, border: `1px solid ${border}`, borderRadius: 24, padding: 32, position: 'relative', textAlign: 'left' }}>
-              <div style={{ position: 'absolute', top: 16, right: 24, fontSize: 72, color: 'rgba(16,185,129,.1)', fontFamily: 'Georgia,serif', lineHeight: 1 }}>"</div>
-              <p style={{ fontSize: 14.5, color: text, lineHeight: 1.75, marginBottom: 24, fontStyle: 'italic', position: 'relative', zIndex: 1 }}>{t.q}</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#10B981,#059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0, fontFamily: "'Sora', sans-serif" }}>{t.i}</div>
-                <div>
-                  <div style={{ fontSize: 13.5, fontWeight: 600, color: text, fontFamily: "'Sora', sans-serif" }}>{t.n}</div>
-                  <div style={{ fontSize: 11.5, color: muted }}>{t.r}</div>
-                </div>
               </div>
             </div>
           ))}
@@ -608,7 +579,7 @@ export default function LandingPage() {
                   background: p.hot ? 'linear-gradient(135deg,#10B981,#059669)' : 'transparent',
                   color: p.hot ? '#fff' : text,
                   border: p.hot ? 'none' : `1px solid ${border}`,
-                  boxShadow: p.hot ? `0 0 24px ${glow}` : 'none',
+                  boxShadow: p.hot ? '0 4px 14px rgba(16,185,129,0.28)' : 'none',
                 }}>
                   {p.cta}
                 </a>
@@ -632,9 +603,9 @@ export default function LandingPage() {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.554 4.122 1.522 5.855L.057 23.854l6.144-1.61A11.934 11.934 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.82 9.82 0 01-5.035-1.385l-.361-.214-3.747.981 1.001-3.656-.235-.376A9.822 9.822 0 012.182 12c0-5.418 4.4-9.818 9.818-9.818 5.418 0 9.818 4.4 9.818 9.818 0 5.418-4.4 9.818-9.818 9.818z"/></svg>
               WhatsApp: +91 95557 90855
             </a>
-            <a href="mailto:ayushmanmishraji@gmail.com"
+            <a href="mailto:ayushmanmishraji1@gmail.com"
               style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: "'Sora', sans-serif", fontSize: 14, fontWeight: 500, color: text, padding: '14px 24px', borderRadius: 999, border: `1px solid ${border}`, textDecoration: 'none' }}>
-              <Mail size={16} /> ayushmanmishraji@gmail.com
+              <Mail size={16} /> ayushmanmishraji1@gmail.com
             </a>
           </div>
         </div>
@@ -649,7 +620,7 @@ export default function LandingPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {[
                 { icon: '💬', label: 'WhatsApp (fastest)', value: '+91 95557 90855', href: 'https://wa.me/919555790855' },
-                { icon: '📧', label: 'Email', value: 'ayushmanmishraji@gmail.com', href: 'mailto:ayushmanmishraji@gmail.com' },
+                { icon: '📧', label: 'Email', value: 'ayushmanmishraji1@gmail.com', href: 'mailto:ayushmanmishraji1@gmail.com' },
               ].map(c => (
                 <div key={c.label} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{ width: 38, height: 38, borderRadius: 12, background: 'rgba(16,185,129,.12)', border: '1px solid rgba(16,185,129,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flexShrink: 0 }}>{c.icon}</div>
@@ -705,7 +676,7 @@ export default function LandingPage() {
                     onBlur={e => (e.target.style.borderColor = border)}
                   />
                 </div>
-                <button type="submit" style={{ width: '100%', padding: '14px', border: 'none', borderRadius: 999, cursor: 'pointer', fontSize: 14, fontWeight: 700, color: '#fff', fontFamily: "'Sora', sans-serif", background: 'linear-gradient(135deg,#10B981,#059669)', boxShadow: `0 0 24px ${glow}` }}>
+                <button type="submit" style={{ width: '100%', padding: '14px', border: 'none', borderRadius: 999, cursor: 'pointer', fontSize: 14, fontWeight: 700, color: '#fff', fontFamily: "'Sora', sans-serif", background: 'linear-gradient(135deg,#10B981,#059669)', boxShadow: '0 4px 14px rgba(16,185,129,0.28)' }}>
                   Send — we'll reply on WhatsApp →
                 </button>
               </form>
@@ -721,7 +692,7 @@ export default function LandingPage() {
             Sales<span style={{ color: '#10B981' }}>Pilot</span>
           </div>
           <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-            {[['#how', 'How it works'], ['#features', 'Features'], ['#pricing', 'Pricing'], ['https://wa.me/919555790855', 'WhatsApp'], ['mailto:ayushmanmishraji@gmail.com', 'Email']].map(([href, label]) => (
+            {[['#how', 'How it works'], ['#features', 'Features'], ['#pricing', 'Pricing'], ['https://wa.me/919555790855', 'WhatsApp'], ['mailto:ayushmanmishraji1@gmail.com', 'Email']].map(([href, label]) => (
               <a key={label} href={href} target={href.startsWith('http') ? '_blank' : undefined} rel="noreferrer"
                 style={{ fontSize: 12.5, color: muted, textDecoration: 'none' }}
                 onMouseEnter={e => (e.currentTarget.style.color = '#10B981')}

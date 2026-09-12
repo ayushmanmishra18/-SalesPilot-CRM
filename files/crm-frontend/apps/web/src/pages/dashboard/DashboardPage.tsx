@@ -72,15 +72,15 @@ export default function DashboardPage() {
                 </button>
               }
             />
-            <div className="divide-y" style={{ '--tw-divide-opacity': 1 } as any}>
+            <div className="flex flex-col">
               {followups.length === 0 ? (
                 <div className="py-12 text-center text-[12.5px]" style={{ color: 'var(--text-3)' }}>
                   ✓ All caught up — no urgent follow-ups
                 </div>
-              ) : followups.map((f: any) => (
+              ) : followups.map((f: any, i: number) => (
                 <div key={f.dealId}
-                  className="flex items-center justify-between px-5 py-3 cursor-pointer transition-colors"
-                  style={{ borderColor: 'var(--border)' }}
+                  className="flex items-center justify-between px-5 py-3 cursor-pointer transition-colors hover:bg-[var(--surface-2)]"
+                  style={{ borderTop: i ? '1px solid var(--border)' : 'none' }}
                   onClick={() => navigate(`/deals/${f.dealId}`)}>
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-1.5 h-1.5 rounded-full flex-shrink-0"
