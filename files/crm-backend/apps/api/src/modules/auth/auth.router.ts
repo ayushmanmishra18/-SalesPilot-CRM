@@ -1,4 +1,5 @@
-import { Router, Request, Response } from 'express'
+import { Request, Response } from 'express'
+import { createRouter } from '../../lib/asyncRouter'
 import { z } from 'zod'
 import { validate } from '../../middleware/validate'
 import { withTenant } from '../../middleware/auth'
@@ -9,7 +10,6 @@ import { config } from '../../config'
 import {
   loginWithPassword,
   loginWithGoogle,
-  loginWithMicrosoft,
   refreshTokens,
   logout,
   resetPassword,
@@ -17,7 +17,7 @@ import {
 } from './auth.service'
 import { AppError } from '../../lib/errors'
 
-const router = Router()
+const router = createRouter()
 
 // POST /auth/login
 router.post('/login', authRateLimit, validate(z.object({
@@ -46,19 +46,6 @@ router.post('/login/google', authRateLimit, validate(z.object({
   } catch (e: any) {
     if (e instanceof AppError) sendError(res, e.status, e.code, e.message)
     else sendError(res, 500, ERROR_CODES.INTERNAL_ERROR, 'Google login failed')
-  }
-})
-
-// POST /auth/login/microsoft
-router.post('/login/microsoft', authRateLimit, validate(z.object({
-  accessToken: z.string().min(1),
-})), async (req: Request, res: Response) => {
-  try {
-    const result = await loginWithMicrosoft(req.body.accessToken)
-    res.json(result)
-  } catch (e: any) {
-    if (e instanceof AppError) sendError(res, e.status, e.code, e.message)
-    else sendError(res, 500, ERROR_CODES.INTERNAL_ERROR, 'Microsoft login failed')
   }
 })
 

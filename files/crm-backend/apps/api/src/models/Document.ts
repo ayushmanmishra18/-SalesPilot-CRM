@@ -4,7 +4,8 @@ export interface IDocument extends MongoDoc {
   publicId:  string
   tenantId:  mongoose.Types.ObjectId
   uploadedBy:mongoose.Types.ObjectId
-  relatedTo: { type: 'contact' | 'deal'; id: mongoose.Types.ObjectId }
+  // `id` is the related Contact/Deal's publicId (string) — see Activity model for the same pattern
+  relatedTo: { type: 'contact' | 'deal'; id: string }
   name:      string
   url:       string
   size:      number
@@ -18,7 +19,7 @@ const DocumentSchema = new Schema<IDocument>({
   uploadedBy: { type: Schema.Types.ObjectId, ref: 'User',   required: true },
   relatedTo: {
     type: { type: String, enum: ['contact', 'deal'], required: true },
-    id:   { type: Schema.Types.ObjectId, required: true },
+    id:   { type: String, required: true }, // publicId of the Contact/Deal
   },
   name:     { type: String, required: true },
   url:      { type: String, required: true },

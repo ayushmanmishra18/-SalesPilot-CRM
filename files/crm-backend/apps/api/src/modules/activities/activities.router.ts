@@ -1,4 +1,5 @@
-import { Router, Request, Response } from 'express'
+import { Request, Response } from 'express'
+import { createRouter } from '../../lib/asyncRouter'
 import { v4 as uuidv4 } from 'uuid'
 import mongoose from 'mongoose'
 import { Server as IOServer } from 'socket.io'
@@ -14,7 +15,7 @@ import { EmailAccount } from '../../models/EmailAccount'
 import { google } from 'googleapis'
 import { config } from '../../config'
 
-const router = Router()
+const router = createRouter()
 router.use(withTenant, requireActiveTenant)
 
 let _io: IOServer | null = null
@@ -106,6 +107,28 @@ router.post('/', requireRole('admin', 'member'), idempotency, validate(CreateAct
       }
     }
 
+    // assigneeId/mentions/replyTo arrive as publicIds (the external contract used
+    // everywhere else) — resolve each to its real ObjectId. `new ObjectId(publicId)`
+    // would throw a CastError (publicIds are UUIDs, not valid ObjectId strings),
+    // which used to crash the whole process and, even caught, always failed the request.
+    let resolvedAssigneeId = null
+    if (body.assigneeId) {
+      const assigneeUser = await User.findOne({ publicId: body.assigneeId, tenantId: req.auth!._tenantId }).select('_id').lean()
+      if (!assigneeUser) { sendError(res, 400, ERROR_CODES.VALIDATION_ERROR, 'Assignee not found'); return }
+      resolvedAssigneeId = assigneeUser._id
+    }
+
+    const mentionUsers = (body.mentions ?? []).length > 0
+      ? await User.find({ publicId: { $in: body.mentions }, tenantId: req.auth!._tenantId }).select('publicId _id').lean()
+      : []
+    const resolvedMentions = mentionUsers.map(u => u._id)
+
+    let resolvedReplyTo = null
+    if (body.replyTo) {
+      const replySource = await Activity.findOne({ publicId: body.replyTo, tenantId: req.auth!._tenantId }).select('_id').lean()
+      resolvedReplyTo = replySource?._id ?? null
+    }
+
     // Store relatedTo.id as the publicId string (not ObjectId) for easy query
     const activity = await Activity.create({
       publicId:  uuidv4(),
@@ -116,12 +139,10 @@ router.post('/', requireRole('admin', 'member'), idempotency, validate(CreateAct
       relatedTo: { type: body.relatedTo.type, id: body.relatedTo.id },
       // task
       dueDate:   body.dueDate    ? new Date(body.dueDate) : null,
-      assigneeId:body.assigneeId ? new mongoose.Types.ObjectId(body.assigneeId) : null,
+      assigneeId:resolvedAssigneeId,
       // comment
-      mentions:  (body.mentions ?? []).map((m: string) => {
-        try { return new mongoose.Types.ObjectId(m) } catch { return null }
-      }).filter(Boolean),
-      replyTo:   body.replyTo ? new mongoose.Types.ObjectId(body.replyTo) : null,
+      mentions:  resolvedMentions,
+      replyTo:   resolvedReplyTo,
       // email
       emailSubject: body.emailSubject ?? null,
       emailTo:      body.emailTo      ?? null,
@@ -186,6 +207,14 @@ router.post('/:id/convert-to-task', requireRole('admin', 'member'), validate(Con
       return
     }
 
+    // assigneeId is a user publicId — resolve to ObjectId (see POST / above for why)
+    let resolvedAssigneeId = null
+    if (req.body.assigneeId) {
+      const assigneeUser = await User.findOne({ publicId: req.body.assigneeId, tenantId: req.auth!._tenantId }).select('_id').lean()
+      if (!assigneeUser) { sendError(res, 400, ERROR_CODES.VALIDATION_ERROR, 'Assignee not found'); return }
+      resolvedAssigneeId = assigneeUser._id
+    }
+
     const task = await Activity.create({
       publicId:     uuidv4(),
       tenantId:     req.auth!._tenantId,
@@ -194,7 +223,7 @@ router.post('/:id/convert-to-task', requireRole('admin', 'member'), validate(Con
       authorId:     req.auth!._userId,
       relatedTo:    source.relatedTo,
       dueDate:      new Date(req.body.dueDate),
-      assigneeId:   req.body.assigneeId ? new mongoose.Types.ObjectId(req.body.assigneeId) : null,
+      assigneeId:   resolvedAssigneeId,
       convertedFrom:source._id,
     })
 

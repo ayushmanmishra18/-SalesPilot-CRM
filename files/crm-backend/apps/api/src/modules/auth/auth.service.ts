@@ -6,7 +6,7 @@ import { OAuth2Client } from 'google-auth-library'
 import { User } from '../../models/User'
 import { Tenant } from '../../models/Tenant'
 import { RefreshToken } from '../../models/RefreshToken'
-import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../lib/jwt'
+import { signAccessToken } from '../../lib/jwt'
 import { AppError } from '../../lib/errors'
 import { ERROR_CODES } from '@crm/shared'
 import { config } from '../../config'
@@ -21,9 +21,11 @@ function hashToken(raw: string): string {
 
 async function issueTokenPair(user: any, tenant: any, family?: string) {
   const accessToken = signAccessToken({
-    userId:   user.publicId,
-    tenantId: tenant.publicId,
-    role:     user.role,
+    userId:    user.publicId,
+    tenantId:  tenant.publicId,
+    role:      user.role,
+    _userId:   user._id.toString(),
+    _tenantId: tenant._id.toString(),
   })
 
   const rawRefresh   = uuidv4()
@@ -123,65 +125,26 @@ export async function loginWithGoogle(idToken: string) {
   return issueTokenPair(user, tenant)
 }
 
-// ── Microsoft Sign-In ────────────────────────────────────────────────────────
-export async function loginWithMicrosoft(accessToken: string) {
-  // Verify with Microsoft Graph
-  let msProfile: any
-  try {
-    const res = await fetch('https://graph.microsoft.com/v1.0/me', {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
-    if (!res.ok) throw new Error('Graph API error')
-    msProfile = await res.json()
-  } catch {
-    throw new AppError(ERROR_CODES.INVALID_CREDENTIALS, 'Invalid Microsoft token', 401)
-  }
-
-  const email = (msProfile.mail ?? msProfile.userPrincipalName ?? '').toLowerCase()
-  if (!email) throw new AppError(ERROR_CODES.INVALID_CREDENTIALS, 'No email on Microsoft account', 401)
-
-  const user = await User.findOne({ email })
-  if (!user) {
-    throw new AppError(ERROR_CODES.INVALID_CREDENTIALS, 'No account found for this email. Contact your admin for an invite.', 401)
-  }
-
-  if (user.status === 'invited') {
-    user.authProvider = 'microsoft'
-    user.microsoftId  = msProfile.id
-    user.status       = 'active'
-    user.inviteToken  = null
-    user.inviteExpiresAt = null
-    await user.save()
-  }
-
-  const tenant = await Tenant.findById(user.tenantId)
-  if (!tenant) throw new AppError(ERROR_CODES.NOT_FOUND, 'Tenant not found', 404)
-  if (tenant.status === 'suspended') throw new AppError(ERROR_CODES.TENANT_SUSPENDED, 'Workspace suspended', 403)
-
-  return issueTokenPair(user, tenant)
-}
 
 // ── Refresh token rotation ────────────────────────────────────────────────────
+// Note: the refresh token is an opaque random UUID (see issueTokenPair), not a JWT —
+// it is validated purely via its hash in the DB, never decoded/verified as a JWT.
 export async function refreshTokens(rawRefreshToken: string) {
-  let payload: ReturnType<typeof verifyRefreshToken>
-  try {
-    payload = verifyRefreshToken(rawRefreshToken)
-  } catch {
-    throw new AppError(ERROR_CODES.TOKEN_INVALID, 'Invalid refresh token', 401)
-  }
-
   const hash     = hashToken(rawRefreshToken)
   const existing = await RefreshToken.findOne({ tokenHash: hash })
 
   if (!existing) {
-    // Token not in DB — potential reuse attack: revoke the whole family
-    await RefreshToken.updateMany({ family: payload.family }, { revokedAt: new Date() })
-    throw new AppError(ERROR_CODES.TOKEN_INVALID, 'Refresh token reuse detected', 401)
+    throw new AppError(ERROR_CODES.TOKEN_INVALID, 'Invalid refresh token', 401)
   }
 
   if (existing.revokedAt) {
+    // Reused/rotated-out token — potential theft: revoke the whole family
     await RefreshToken.updateMany({ family: existing.family }, { revokedAt: new Date() })
     throw new AppError(ERROR_CODES.TOKEN_INVALID, 'Refresh token revoked', 401)
+  }
+
+  if (existing.expiresAt < new Date()) {
+    throw new AppError(ERROR_CODES.TOKEN_INVALID, 'Refresh token expired', 401)
   }
 
   // Rotate: mark old as used

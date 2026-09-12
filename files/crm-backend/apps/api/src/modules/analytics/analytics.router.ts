@@ -1,11 +1,12 @@
-import { Router, Request, Response } from 'express'
+import { Request, Response } from 'express'
+import { createRouter } from '../../lib/asyncRouter'
 import { withTenant, requireRole, requireActiveTenant } from '../../middleware/auth'
 import { Deal } from '../../models/Deal'
 import { User } from '../../models/User'
 import { Tenant } from '../../models/Tenant'
 import { computeSlaStatus } from '../../lib/sla'
 
-const router = Router()
+const router = createRouter()
 router.use(withTenant, requireActiveTenant)
 
 // GET /analytics/pipeline  — pipeline-level analytics (admin/member)

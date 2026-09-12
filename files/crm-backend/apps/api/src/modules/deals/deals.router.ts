@@ -1,4 +1,5 @@
-import { Router, Request, Response } from 'express'
+import { Request, Response } from 'express'
+import { createRouter } from '../../lib/asyncRouter'
 import { v4 as uuidv4 } from 'uuid'
 import { Server as IOServer } from 'socket.io'
 import { withTenant, requireRole, requireActiveTenant } from '../../middleware/auth'
@@ -15,10 +16,26 @@ import {
 } from '@crm/shared'
 import { Deal } from '../../models/Deal'
 import { Tenant } from '../../models/Tenant'
+import { Contact } from '../../models/Contact'
+import { User } from '../../models/User'
 import { computeSlaStatus } from '../../lib/sla'
 import { getSlaQueue, slaJobId } from '../../lib/slaQueue'
 
-const router = Router()
+// contactId/ownerId are exposed and accepted everywhere else in the API as
+// publicId (UUID) — never the internal Mongo ObjectId. Resolve a publicId to
+// its ObjectId here so we never hand a raw string straight to an ObjectId
+// field (that throws a CastError and, before the asyncRouter fix, crashed the
+// whole process).
+async function resolveContactObjectId(tenantId: any, contactPublicId: string) {
+  const contact = await Contact.findOne({ publicId: contactPublicId, tenantId, deletedAt: null }).select('_id').lean()
+  return contact?._id ?? null
+}
+async function resolveUserObjectId(tenantId: any, userPublicId: string) {
+  const user = await User.findOne({ publicId: userPublicId, tenantId }).select('_id').lean()
+  return user?._id ?? null
+}
+
+const router = createRouter()
 router.use(withTenant, requireActiveTenant)
 
 let _io: IOServer | null = null
@@ -27,6 +44,13 @@ export function setIo(io: IOServer) { _io = io }
 async function getTenant(tenantId: any) {
   return Tenant.findById(tenantId).select('slaConfig currency stages').lean()
 }
+
+// Shared populate spec so every Deal read resolves contactId/ownerId into
+// { publicId } for serializeDeal, instead of leaving raw ObjectIds.
+const DEAL_POPULATE = [
+  { path: 'contactId', select: 'publicId' },
+  { path: 'ownerId',   select: 'publicId' },
+]
 
 function serializeDeal(d: any, tenant: any) {
   const slaStatus = computeSlaStatus(d.nextAction, tenant.slaConfig)
@@ -43,8 +67,10 @@ function serializeDeal(d: any, tenant: any) {
       movedAt: h.movedAt,
     })),
     expectedCloseDate: d.expectedCloseDate,
-    contactId:         d.contactId,
-    ownerId:           d.ownerId,
+    // `contactId`/`ownerId` are populated (see population helper below) — expose the
+    // public UUID, matching every other resource's external contract, never the raw ObjectId
+    contactId:         d.contactId?.publicId ?? null,
+    ownerId:           d.ownerId?.publicId ?? null,
     status:            d.status,
     lostReason:        d.lostReason,
     nextAction:        d.nextAction ? {
@@ -89,10 +115,15 @@ router.get('/', async (req: Request, res: Response) => {
   const filter: any = { tenantId: req.auth!._tenantId, deletedAt: null }
   if (status)  filter.status  = status
   if (stage)   filter.stage   = stage
-  if (ownerId) filter.ownerId = ownerId
+  if (ownerId) {
+    // ownerId is passed as a user publicId (external contract) — resolve to the real ObjectId.
+    const resolvedOwnerId = await resolveUserObjectId(req.auth!._tenantId, ownerId)
+    if (!resolvedOwnerId) { res.json({ deals: [] }); return } // unknown user in this tenant — no matches, not an error
+    filter.ownerId = resolvedOwnerId
+  }
 
   const [deals, tenant] = await Promise.all([
-    Deal.find(filter).sort({ createdAt: -1 }).lean(),
+    Deal.find(filter).sort({ createdAt: -1 }).populate(DEAL_POPULATE).lean(),
     getTenant(req.auth!._tenantId),
   ])
   if (!tenant) { sendError(res, 500, ERROR_CODES.INTERNAL_ERROR, 'Tenant not found'); return }
@@ -103,7 +134,7 @@ router.get('/', async (req: Request, res: Response) => {
 // GET /deals/:id
 router.get('/:id', async (req: Request, res: Response) => {
   const [deal, tenant] = await Promise.all([
-    Deal.findOne({ publicId: req.params.id, tenantId: req.auth!._tenantId, deletedAt: null }).lean(),
+    Deal.findOne({ publicId: req.params.id, tenantId: req.auth!._tenantId, deletedAt: null }).populate(DEAL_POPULATE).lean(),
     getTenant(req.auth!._tenantId),
   ])
   if (!deal)   { notFound(res, 'Deal');   return }
@@ -124,6 +155,18 @@ router.post('/', requireRole('admin', 'member'), idempotency, validate(CreateDea
       return
     }
 
+    // contactId (if provided) is a contact publicId — resolve it to the real ObjectId.
+    // Never pass the raw string straight into an ObjectId field: an unresolved/invalid
+    // id throws a Mongoose CastError, which used to crash the whole process.
+    let resolvedContactId = null
+    if (req.body.contactId) {
+      resolvedContactId = await resolveContactObjectId(req.auth!._tenantId, req.body.contactId)
+      if (!resolvedContactId) {
+        sendError(res, 400, ERROR_CODES.VALIDATION_ERROR, 'Contact not found')
+        return
+      }
+    }
+
     const deal = await Deal.create({
       publicId: uuidv4(),
       tenantId: req.auth!._tenantId,
@@ -131,10 +174,11 @@ router.post('/', requireRole('admin', 'member'), idempotency, validate(CreateDea
       title:    req.body.title,
       value:    req.body.value ?? 0,
       stage:    req.body.stage,
-      contactId:req.body.contactId ?? null,
+      contactId:resolvedContactId,
       expectedCloseDate: req.body.expectedCloseDate ?? null,
       stageHistory: [{ stage: req.body.stage, movedBy: req.auth!._userId, movedAt: new Date() }],
     })
+    await deal.populate(DEAL_POPULATE)
 
     res.status(201).json({ deal: serializeDeal(deal.toObject(), tenant) })
   }
@@ -143,12 +187,25 @@ router.post('/', requireRole('admin', 'member'), idempotency, validate(CreateDea
 // PATCH /deals/:id
 router.patch('/:id', requireRole('admin', 'member'), validate(UpdateDealSchema),
   async (req: Request, res: Response) => {
+    const updates: any = { ...req.body }
+
+    // Same publicId -> ObjectId resolution as create (see POST /deals above)
+    if ('contactId' in updates) {
+      if (updates.contactId) {
+        const resolved = await resolveContactObjectId(req.auth!._tenantId, updates.contactId)
+        if (!resolved) { sendError(res, 400, ERROR_CODES.VALIDATION_ERROR, 'Contact not found'); return }
+        updates.contactId = resolved
+      } else {
+        updates.contactId = null
+      }
+    }
+
     const [deal, tenant] = await Promise.all([
       Deal.findOneAndUpdate(
         { publicId: req.params.id, tenantId: req.auth!._tenantId, deletedAt: null },
-        { ...req.body },
+        updates,
         { new: true }
-      ).lean(),
+      ).populate(DEAL_POPULATE).lean(),
       getTenant(req.auth!._tenantId),
     ])
     if (!deal)   { notFound(res, 'Deal');   return }
@@ -173,7 +230,7 @@ router.patch('/:id/stage', requireRole('admin', 'member'), validate(MoveDealStag
         $push: { stageHistory: { stage: req.body.stage, movedBy: req.auth!._userId, movedAt: new Date() } },
       },
       { new: true }
-    ).lean()
+    ).populate(DEAL_POPULATE).lean()
     if (!deal) { notFound(res, 'Deal'); return }
 
     // Emit live board update
@@ -201,7 +258,7 @@ router.post('/:id/close', requireRole('admin', 'member'), validate(CloseDealSche
         $push: { stageHistory: { stage: status === 'won' ? 'Won' : 'Lost', movedBy: req.auth!._userId, movedAt: new Date() } },
       },
       { new: true }
-    ).lean()
+    ).populate(DEAL_POPULATE).lean()
     if (!deal) { notFound(res, 'Deal'); return }
 
     // Cancel any pending SLA job
@@ -232,9 +289,11 @@ router.patch('/:id/next-action', requireRole('admin', 'member'), validate(SetDea
     const tenant = await getTenant(req.auth!._tenantId)
     if (!tenant) { notFound(res, 'Tenant'); return }
 
-    // Schedule SLA overdue job
+    // Schedule SLA overdue job — must run on the raw (unpopulated) ownerId ObjectId
     await scheduleSlaJob(deal, tenant).catch(() => {})
 
+    // Populate for the response only, after scheduling (which needs the raw ObjectId)
+    await Deal.populate(deal, DEAL_POPULATE)
     res.json({ deal: serializeDeal(deal, tenant) })
   }
 )

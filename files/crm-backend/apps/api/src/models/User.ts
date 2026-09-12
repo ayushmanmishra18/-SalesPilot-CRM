@@ -5,10 +5,9 @@ export interface IUser extends Document {
   tenantId:          mongoose.Types.ObjectId
   name:              string
   email:             string          // globally unique
-  authProvider:      'password' | 'google' | 'microsoft'
+  authProvider:      'password' | 'google'
   passwordHash:      string | null
   googleId:          string | null
-  microsoftId:       string | null
   mustResetPassword: boolean
   role:              'admin' | 'member' | 'viewer'
   status:            'active' | 'invited'
@@ -23,10 +22,9 @@ const UserSchema = new Schema<IUser>({
   tenantId:          { type: Schema.Types.ObjectId, ref: 'Tenant', required: true },
   name:              { type: String, required: true },
   email:             { type: String, required: true, unique: true, lowercase: true, trim: true },
-  authProvider:      { type: String, enum: ['password', 'google', 'microsoft'], default: 'password' },
+  authProvider:      { type: String, enum: ['password', 'google'], default: 'password' },
   passwordHash:      { type: String, default: null },
   googleId:          { type: String, default: null },
-  microsoftId:       { type: String, default: null },
   mustResetPassword: { type: Boolean, default: false },
   role:              { type: String, enum: ['admin', 'member', 'viewer'], required: true },
   status:            { type: String, enum: ['active', 'invited'], default: 'invited' },

@@ -1,4 +1,5 @@
-import { Router, Request, Response } from 'express'
+import { Request, Response } from 'express'
+import { createRouter } from '../../lib/asyncRouter'
 import { v4 as uuidv4 } from 'uuid'
 import { google } from 'googleapis'
 import { withTenant, requireRole, requireActiveTenant } from '../../middleware/auth'
@@ -9,7 +10,7 @@ import { EmailAccount } from '../../models/EmailAccount'
 import { config } from '../../config'
 import { z } from 'zod'
 
-const router = Router()
+const router = createRouter()
 router.use(withTenant, requireActiveTenant)
 
 function getOAuth2Client() {

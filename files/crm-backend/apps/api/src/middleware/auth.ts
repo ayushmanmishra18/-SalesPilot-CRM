@@ -34,8 +34,8 @@ export function withTenant(req: Request, res: Response, next: NextFunction): voi
       userId:   payload.userId,
       tenantId: payload.tenantId,
       role:     payload.role as Role,
-      _userId:  new mongoose.Types.ObjectId(payload.userId),
-      _tenantId:new mongoose.Types.ObjectId(payload.tenantId),
+      _userId:  new mongoose.Types.ObjectId(payload._userId),
+      _tenantId:new mongoose.Types.ObjectId(payload._tenantId),
     }
     next()
   } catch {

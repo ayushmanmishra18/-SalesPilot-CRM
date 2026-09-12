@@ -1,11 +1,12 @@
-import { Router, Request, Response } from 'express'
+import { Request, Response } from 'express'
+import { createRouter } from '../../lib/asyncRouter'
 import { withTenant, requireActiveTenant } from '../../middleware/auth'
 import { Deal } from '../../models/Deal'
 import { Contact } from '../../models/Contact'
 import { Tenant } from '../../models/Tenant'
 import { computeSlaStatus } from '../../lib/sla'
 
-const router = Router()
+const router = createRouter()
 router.use(withTenant, requireActiveTenant)
 
 // GET /dashboard/followups — deals needing attention (live SLA)

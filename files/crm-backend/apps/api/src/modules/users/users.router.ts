@@ -1,4 +1,5 @@
-import { Router, Request, Response } from 'express'
+import { Request, Response } from 'express'
+import { createRouter } from '../../lib/asyncRouter'
 import { withTenant, requireRole, requireActiveTenant } from '../../middleware/auth'
 import { idempotency } from '../../middleware/idempotency'
 import { validate } from '../../middleware/validate'
@@ -9,7 +10,7 @@ import { Tenant } from '../../models/Tenant'
 import { inviteUser } from '../auth/auth.service'
 import { config } from '../../config'
 
-const router = Router()
+const router = createRouter()
 router.use(withTenant, requireActiveTenant)
 
 function serializeUser(u: any) {

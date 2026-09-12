@@ -21,6 +21,7 @@ import settingsRouter      from './modules/settings/settings.router'
 import analyticsRouter     from './modules/analytics/analytics.router'
 import emailRouter         from './modules/email/email.router'
 import documentsRouter     from './modules/documents/documents.router'
+import publicRouter        from './modules/public/public.router'
 
 export function createApp() {
   const app = express()
@@ -46,8 +47,10 @@ export function createApp() {
   }))
 
   // ── Request parsing ────────────────────────────────────────────────────────
-  app.use(express.json({ limit: '2mb' }))
-  app.use(express.urlencoded({ extended: true }))
+  // 15mb accommodates the 10MB file the Documents upload UI advertises, base64-encoded
+  // (~33% inflation) plus headroom for the rest of the JSON payload.
+  app.use(express.json({ limit: '15mb' }))
+  app.use(express.urlencoded({ extended: true, limit: '15mb' }))
 
   // ── Correlation ID + structured logging (wired first — cheapest moment) ────
   app.use(requestIdMiddleware)
@@ -66,6 +69,9 @@ export function createApp() {
 
   // Auth — no tenant context required
   app.use('/auth', authRouter)
+
+  // Public marketing endpoints (landing page contact form) — unauthenticated by design
+  app.use('/public', publicRouter)
 
   // Protected tenant routes
   app.use('/users',         usersRouter)

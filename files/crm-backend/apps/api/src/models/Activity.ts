@@ -6,7 +6,10 @@ export interface IActivity extends Document {
   type:          'note' | 'task' | 'comment' | 'email'
   text:          string
   authorId:      mongoose.Types.ObjectId
-  relatedTo:     { type: 'contact' | 'deal'; id: mongoose.Types.ObjectId }
+  // `id` is the related Contact/Deal's publicId (string), not its Mongo ObjectId —
+  // relatedTo is polymorphic (contact or deal), so a single ObjectId ref isn't even
+  // meaningful here; the router has always read/written it as a publicId string.
+  relatedTo:     { type: 'contact' | 'deal'; id: string }
   // task only
   dueDate:       Date | null
   done:          boolean
@@ -31,7 +34,7 @@ const ActivitySchema = new Schema<IActivity>({
   authorId:      { type: Schema.Types.ObjectId, ref: 'User', required: true },
   relatedTo: {
     type: { type: String, enum: ['contact', 'deal'], required: true },
-    id:   { type: Schema.Types.ObjectId, required: true },
+    id:   { type: String, required: true }, // publicId of the Contact/Deal — see IActivity note above
   },
   // task
   dueDate:       { type: Date,   default: null },

@@ -1,4 +1,5 @@
-import { Router, Request, Response } from 'express'
+import { Request, Response } from 'express'
+import { createRouter } from '../../lib/asyncRouter'
 import { withTenant, requireRole, requireActiveTenant } from '../../middleware/auth'
 import { validate } from '../../middleware/validate'
 import { notFound } from '../../lib/errors'
@@ -6,7 +7,7 @@ import { UpdateTenantSchema, UpdateStagesSchema } from '@crm/shared'
 import { Tenant } from '../../models/Tenant'
 import { z } from 'zod'
 
-const router = Router()
+const router = createRouter()
 router.use(withTenant, requireActiveTenant)
 
 // GET /settings  — returns full tenant config (used by Settings page + pipeline kanban)

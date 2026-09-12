@@ -1,4 +1,5 @@
-import { Router, Request, Response } from 'express'
+import { Request, Response } from 'express'
+import { createRouter } from '../../lib/asyncRouter'
 import bcrypt from 'bcryptjs'
 import { v4 as uuidv4 } from 'uuid'
 import mongoose from 'mongoose'
@@ -6,6 +7,7 @@ import { SuperAdmin } from '../../models/SuperAdmin'
 import { Tenant } from '../../models/Tenant'
 import { User } from '../../models/User'
 import { Deal } from '../../models/Deal'
+import { Lead } from '../../models/Lead'
 import { requireSuperAdmin } from '../../middleware/adminAuth'
 import { signAdminToken } from '../../lib/jwt'
 import { sendError } from '../../lib/errors'
@@ -14,7 +16,7 @@ import { validate } from '../../middleware/validate'
 import { authRateLimit } from '../../middleware/rateLimit'
 import { z } from 'zod'
 
-const router = Router()
+const router = createRouter()
 
 // POST /admin/login
 router.post('/login', authRateLimit, validate(z.object({
@@ -154,6 +156,30 @@ router.patch('/tenants/:id/reactivate', async (req: Request, res: Response) => {
     { new: true }
   )
   if (!tenant) { sendError(res, 404, ERROR_CODES.NOT_FOUND, 'Tenant not found'); return }
+  res.json({ ok: true })
+})
+
+// GET /admin/leads — leads captured by the landing page's contact form (see /public/leads)
+router.get('/leads', async (req: Request, res: Response) => {
+  const leads = await Lead.find().sort({ createdAt: -1 }).limit(200).lean()
+  res.json({
+    leads: leads.map(l => ({
+      id:        l._id.toString(),
+      name:      l.name,
+      phone:     l.phone,
+      company:   l.company,
+      teamSize:  l.teamSize,
+      challenge: l.challenge,
+      contacted: l.contacted,
+      createdAt: l.createdAt,
+    })),
+  })
+})
+
+// PATCH /admin/leads/:id/contacted — mark a lead as followed up
+router.patch('/leads/:id/contacted', async (req: Request, res: Response) => {
+  const lead = await Lead.findByIdAndUpdate(req.params.id, { contacted: true }, { new: true })
+  if (!lead) { sendError(res, 404, ERROR_CODES.NOT_FOUND, 'Lead not found'); return }
   res.json({ ok: true })
 })
 

@@ -6,9 +6,9 @@
     "packages/*"
   ],
   "scripts": {
-    "dev:api":    "npm run dev --workspace=apps/api",
-    "dev:worker": "npm run dev --workspace=apps/worker",
-    "build":      "npm run build --workspace=apps/api && npm run build --workspace=apps/worker",
+    "dev:api":    "npm run build --workspace=packages/shared && npm run dev --workspace=apps/api",
+    "dev:worker": "npm run build --workspace=packages/shared && npm run dev --workspace=apps/worker",
+    "build":      "npm run build --workspace=packages/shared && npm run build --workspace=apps/api && npm run build --workspace=apps/worker",
     "lint":       "npm run lint --workspaces --if-present"
   }
 }

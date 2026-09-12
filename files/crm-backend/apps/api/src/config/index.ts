@@ -19,10 +19,20 @@ export const config = {
   redisUrl: optional('REDIS_URL',   'redis://localhost:6379'),
 
   jwt: {
-    accessSecret:    optional('JWT_ACCESS_SECRET',  'dev-access-secret-change-in-prod'),
-    refreshSecret:   optional('JWT_REFRESH_SECRET', 'dev-refresh-secret-change-in-prod'),
+    // Required, not optional-with-a-fallback: a hardcoded default secret sitting in the
+    // source code means anyone who's ever read this codebase could forge a valid token
+    // for any user if the real env var is ever missing in a deployed environment. Failing
+    // to start is far safer than silently signing tokens with a known secret.
+    //
+    // Note: there's no separate "refresh" secret here — refresh tokens are opaque random
+    // UUIDs validated by their hash in the DB (see auth.service.ts), never JWT-signed, so
+    // there's nothing for a refresh-specific secret to do.
+    accessSecret:    required('JWT_ACCESS_SECRET'),
+    // The super-admin token gets its own independent secret rather than being derived
+    // from accessSecret (e.g. accessSecret + '-admin') — deriving it that way means a
+    // leaked user-token secret hands over the admin secret for free.
+    adminSecret:     required('JWT_ADMIN_SECRET'),
     accessExpiresIn: optional('JWT_ACCESS_EXPIRES_IN',  '15m'),
-    refreshExpiresIn:optional('JWT_REFRESH_EXPIRES_IN', '30d'),
   },
 
   superAdmin: {
@@ -40,11 +50,6 @@ export const config = {
     redirectUri:  optional('GOOGLE_GMAIL_REDIRECT_URI',  'http://localhost:5173/settings'),
   },
 
-  microsoft: {
-    tenantId: optional('MICROSOFT_TENANT_ID', 'common'),
-    clientId: optional('MICROSOFT_CLIENT_ID', ''),
-  },
-
   smtp: {
     host: optional('SMTP_HOST', 'smtp.gmail.com'),
     port: parseInt(optional('SMTP_PORT', '587'), 10),
@@ -52,4 +57,8 @@ export const config = {
     pass: optional('SMTP_PASS', ''),
     from: optional('EMAIL_FROM', 'SalesPilot CRM <no-reply@example.com>'),
   },
+
+  // Where the landing page's "Let's connect" form notifies on a new lead (best-effort —
+  // the lead is always persisted to the DB regardless of whether this email send succeeds).
+  leadsNotifyEmail: optional('LEADS_NOTIFY_EMAIL', 'ayushmanmishraji1@gmail.com'),
 }

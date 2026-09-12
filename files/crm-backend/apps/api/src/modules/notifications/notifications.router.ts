@@ -1,9 +1,10 @@
-import { Router, Request, Response } from 'express'
+import { Request, Response } from 'express'
+import { createRouter } from '../../lib/asyncRouter'
 import { withTenant, requireActiveTenant } from '../../middleware/auth'
 import { notFound } from '../../lib/errors'
 import { Notification } from '../../models/Notification'
 
-const router = Router()
+const router = createRouter()
 router.use(withTenant, requireActiveTenant)
 
 function serialize(n: any) {
