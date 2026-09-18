@@ -230,7 +230,10 @@ export async function inviteUser(opts: {
 
   const acceptUrl = `${opts.frontendUrl}/accept-invite?token=${inviteToken}`
 
-  await sendMail({
+  // Not awaited: the invite is already persisted above, so a slow or hanging SMTP
+  // connection must never hold up the API response — the caller only needs the
+  // invite (and its token) back, not confirmation that the email left the building.
+  sendMail({
     to:      opts.email,
     subject: `You've been invited to ${opts.companyName}`,
     html:    inviteEmailHtml({ companyName: opts.companyName, inviterName: opts.inviterName, acceptUrl }),
