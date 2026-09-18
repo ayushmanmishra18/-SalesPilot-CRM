@@ -26,6 +26,13 @@ import publicRouter        from './modules/public/public.router'
 export function createApp() {
   const app = express()
 
+  // ── Trust proxy ─────────────────────────────────────────────────────────────
+  // Render terminates TLS and proxies every request through exactly one hop, so
+  // req.ip / X-Forwarded-For must be trusted for exactly 1 hop — not `true`
+  // (which would trust the whole chain, letting a client spoof its own IP via
+  // X-Forwarded-For and evade express-rate-limit's IP-based keying).
+  app.set('trust proxy', 1)
+
   // ── Security headers ───────────────────────────────────────────────────────
   app.use(helmet({
     crossOriginEmbedderPolicy: false,   // Allow Socket.IO transport

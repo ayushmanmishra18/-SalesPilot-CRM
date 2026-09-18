@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { validate } from '../../middleware/validate'
 import { authRateLimit } from '../../middleware/rateLimit'
 import { Lead } from '../../models/Lead'
-import { sendMail } from '../../lib/mailer'
+import { sendMail, leadNotifyEmailHtml } from '../../lib/mailer'
 import { config } from '../../config'
 import { logger } from '../../lib/logger'
 
@@ -36,16 +36,7 @@ router.post('/leads', authRateLimit, validate(LeadSchema), async (req: Request, 
   sendMail({
     to:      config.leadsNotifyEmail,
     subject: `New SalesPilot lead: ${name}`,
-    html: `
-      <div style="font-family:sans-serif;max-width:480px;margin:auto">
-        <h2>New lead from the landing page</h2>
-        <p><strong>Name:</strong> ${name}</p>
-        <p><strong>Phone:</strong> ${phone}</p>
-        ${company ? `<p><strong>Company:</strong> ${company}</p>` : ''}
-        ${teamSize ? `<p><strong>Team size:</strong> ${teamSize}</p>` : ''}
-        ${challenge ? `<p><strong>Challenge:</strong> ${challenge}</p>` : ''}
-      </div>
-    `,
+    html:    leadNotifyEmailHtml({ name, phone, company, teamSize, challenge }),
   }).catch(err => logger.warn('lead notification email failed', { err: err.message }))
 
   res.status(201).json({ ok: true, id: lead.id })
