@@ -50,6 +50,8 @@ export const config = {
     redirectUri:  optional('GOOGLE_GMAIL_REDIRECT_URI',  'http://localhost:5173/settings'),
   },
 
+  // Only `from` is still used — email is sent via Resend's HTTPS API (see lib/mailer.ts),
+  // not SMTP, since Render blocks outbound SMTP ports. host/port/user/pass are legacy.
   smtp: {
     host: optional('SMTP_HOST', 'smtp.gmail.com'),
     port: parseInt(optional('SMTP_PORT', '587'), 10),
@@ -57,6 +59,8 @@ export const config = {
     pass: optional('SMTP_PASS', ''),
     from: optional('EMAIL_FROM', 'SalesPilot CRM <no-reply@example.com>'),
   },
+
+  resendApiKey: optional('RESEND_API_KEY', ''),
 
   // Where the landing page's "Let's connect" form notifies on a new lead (best-effort —
   // the lead is always persisted to the DB regardless of whether this email send succeeds).

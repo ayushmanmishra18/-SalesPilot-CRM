@@ -1,25 +1,42 @@
-import nodemailer from 'nodemailer'
 import { config } from '../config'
 import { logger } from './logger'
 
-const transporter = nodemailer.createTransport({
-  host:   config.smtp.host,
-  port:   config.smtp.port,
-  secure: config.smtp.port === 465,
-  auth:   { user: config.smtp.user, pass: config.smtp.pass },
-})
+const RESEND_API_URL = 'https://api.resend.com/emails'
 
+// Sends via Resend's HTTPS API rather than raw SMTP. Render's outbound network
+// blocks SMTP ports entirely (confirmed: connections never even reached Resend's
+// or Gmail's mail servers — no log on either side, just a hang until timeout),
+// so plain SMTP cannot work from this host regardless of provider. HTTPS on 443
+// is unaffected — the rest of this app already depends on that working.
 export async function sendMail(opts: {
   to:      string
   subject: string
   html:    string
 }): Promise<void> {
-  if (!config.smtp.user) {
+  if (!config.resendApiKey) {
     // Dev mode — just log
-    logger.info('[mailer] skipping send (SMTP not configured)', { to: opts.to, subject: opts.subject })
+    logger.info('[mailer] skipping send (RESEND_API_KEY not configured)', { to: opts.to, subject: opts.subject })
     return
   }
-  await transporter.sendMail({ from: config.smtp.from, ...opts })
+
+  const res = await fetch(RESEND_API_URL, {
+    method:  'POST',
+    headers: {
+      Authorization:  `Bearer ${config.resendApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from:    config.smtp.from,
+      to:      [opts.to],
+      subject: opts.subject,
+      html:    opts.html,
+    }),
+  })
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new Error(`Resend API error ${res.status}: ${body}`)
+  }
 }
 
 // ── Branded layout ────────────────────────────────────────────────────────────
